@@ -1,221 +1,167 @@
 import React, { useState, useEffect } from "react";
-import { getMovies, createMovie, deleteMovie } from "../services/api";
-import axios from "axios";
+import { createEpisode, deleteEpisode, uploadFile , getEpisodesBySeries } from "../services/api";
 
-const Movies = () => {
-  
-  const [movies, setMovies] = useState([]);
-  
-  const [newMovie, setNewMovie] = useState({
+const Movies = ({ seriesId }) => {
+  const [episodes, setEpisodes] = useState([]);
+  const [newEpisode, setNewEpisode] = useState({
     title: "",
-    description: "",
-    imageUrl: "",
-    videoUrl: "",
+    episodeNumber: "",
+    thumbnail: "",
+    fileName: "",
   });
-
   const [imageFile, setImageFile] = useState(null);
   const [videoFile, setVideoFile] = useState(null);
+  const [error, setError] = useState("");
 
-  const BUNNY_STORAGE_URL = "https://storage.bunnycdn.com/muhammadamin/"; // Storage Zone endpoint
-  const BUNNY_API_KEY = "107dd695-481a-433e-9f21ccff5510-4096-473e"; // Storage API Key
-  const BUNNY_CDN_URL = "https://Tarixiykino1.b-cdn.net/"; // Pull Zone URL
+  // // Placeholder for fetching episodes
+  // const fetchEpisodes = async () => {
+  //   try {
+  //     // TODO: getEpisodesBySeries(seriesId) qo‘shilsa, shu yerdan foydalaning
+  //     setEpisodes([]); // Hozircha bo‘sh ro‘yxat
+  //   } catch (err) {
+  //     setError("Episodlarni olishda xato: " + err.message);
+  //   }
+  // };
 
-  useEffect(() => {
-    fetchMovies();
-  }, []);
-
-  const fetchMovies = async () => {
-    try {
-      const data = await getMovies();
-      setMovies(data);
-    } catch (err) {
-      console.error("Filmlarni olishda xato:", err);
+useEffect(() => {
+  if (!seriesId || isNaN(seriesId)) {
+      setError("Series ID topilmadi yoki noto‘g‘ri formatda!");
+      return;
     }
-  };
 
-  const uploadToBunnyCDN = async (file, fileName) => {
-    try {
-      const response = await axios.put(
-        `${BUNNY_STORAGE_URL}${fileName}`,
-        file,
-        {
-          headers: {
-            AccessKey: BUNNY_API_KEY,
-            "Content-Type": file.type,
-          },
+  const fetchEpisodes = async () => {
+        try {
+            const data = await getEpisodesBySeries(seriesId);
+            setEpisodes(data);
+        } catch (err) {
+            setError("Episodlarni olishda xato: " + err.message);
         }
-      );
-
-      if (response.status === 200) {
-        console.log("Yuklandi:", `${BUNNY_CDN_URL}${fileName}`);
-        return `${BUNNY_CDN_URL}${fileName}`;
-      }
-      throw new Error("Fayl yuklashda xato");
-    } catch (error) {
-      console.error("BunnyCDN yuklash xatosi:", error);
-      throw new Error("Faylni BunnyCDN’ga yuklashda xato");
-    }
-  };
+    };
+    fetchEpisodes();
+}, [seriesId]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
-      let updatedMovie = { ...newMovie };
+      let updatedEpisode = { ...newEpisode };
 
       if (imageFile) {
-        const imageFileName = `images/${Date.now()}_${imageFile.name}`;
-        updatedMovie.imageUrl = await uploadToBunnyCDN(
-          imageFile,
-          imageFileName
-        );
+        updatedEpisode.thumbnail = await uploadFile(imageFile, "image");
       }
 
       if (videoFile) {
-        const videoFileName = `videos/${Date.now()}_${videoFile.name}`;
-        updatedMovie.videoUrl = await uploadToBunnyCDN(
-          videoFile,
-          videoFileName
-        );
+        updatedEpisode.fileName = await uploadFile(videoFile, "video");
       }
 
-      console.log("Backendga yuborilayotgan ma'lumot:", updatedMovie);
-      await createMovie(updatedMovie);
-      setNewMovie({ title: "", description: "", imageUrl: "", videoUrl: "" });
+      const createdEpisode = await createEpisode(seriesId, updatedEpisode);
+      setEpisodes([...episodes, createdEpisode]);
+      setNewEpisode({ title: "", episodeNumber: "", thumbnail: "", fileName: "" });
       setImageFile(null);
       setVideoFile(null);
-      fetchMovies();
     } catch (err) {
-      console.error("Film qo‘shishda xato:", err);
+      setError("Episod qo‘shishda xato: " + err.message);
     }
   };
 
   const handleDelete = async (id) => {
     try {
-      await deleteMovie(id);
-      fetchMovies();
+      await deleteEpisode(id);
+      setEpisodes(episodes.filter((episode) => episode.id !== id));
     } catch (err) {
-      console.error("Film o‘chirishda xato:", err);
+      setError("Episodni o‘chirishda xato: " + err.message);
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-900 text-white p-6">
-      <h1 className="text-2xl font-semibold mb-6">Add new item</h1>
+      <h1 className="text-2xl font-bold mb-6">Yangi Episod Qo‘shish (Seria {seriesId})</h1>
+      {error && <p className="text-red-500 mb-4">{error}</p>}
+
       <form onSubmit={handleCreate} className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Cover Image Upload */}
-          <div className="md:col-span-1">
-            <div className="bg-gray-800 p-4 rounded-lg text-center h-64 flex items-center justify-center">
-              <label className="cursor-pointer">
-                <span className="text-gray-400">Upload cover (190 x 270)</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={(e) => setImageFile(e.target.files[0])}
-                  className="hidden"
-                />
-              </label>
-            </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block mb-2">Nomi</label>
+            <input
+              type="text"
+              className="w-full p-2 rounded bg-gray-800"
+              value={newEpisode.title}
+              onChange={(e) => setNewEpisode({ ...newEpisode, title: e.target.value })}
+              required
+            />
           </div>
 
-          {/* Title and Description */}
-          <div className="md:col-span-2 space-y-6">
-            <div>
-              <label className="block text-gray-400 mb-2">Title</label>
-              <input
-                type="text"
-                value={newMovie.title}
-                onChange={(e) =>
-                  setNewMovie({ ...newMovie, title: e.target.value })
-                }
-                className="w-full p-2 bg-gray-700 rounded-lg"
-                placeholder="Enter title"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-gray-400 mb-2">Description</label>
-              <textarea
-                value={newMovie.description}
-                onChange={(e) =>
-                  setNewMovie({ ...newMovie, description: e.target.value })
-                }
-                className="w-full p-2 bg-gray-700 rounded-lg h-24"
-                placeholder="Enter description"
-                required
-              />
-            </div>
+          <div>
+            <label className="block mb-2">Episod raqami</label>
+            <input
+              type="number"
+              className="w-full p-2 rounded bg-gray-800"
+              value={newEpisode.episodeNumber}
+              onChange={(e) => setNewEpisode({ ...newEpisode, episodeNumber: e.target.value })}
+              required
+            />
           </div>
-        </div>
 
-        {/* Video Upload */}
-        <div>
-          <label className="block text-gray-400 mb-2">Upload video</label>
-          <div className="flex space-x-4">
+          <div>
+            <label className="block mb-2">Rasm</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setImageFile(e.target.files[0])}
+              className="w-full p-2 rounded bg-gray-800"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2">Video</label>
             <input
               type="file"
               accept="video/*"
               onChange={(e) => setVideoFile(e.target.files[0])}
-              className="w-full p-2 bg-gray-700 rounded-lg"
-            />
-            <span className="text-gray-400">or</span>
-            <input
-              type="text"
-              value={newMovie.videoUrl}
-              onChange={(e) =>
-                setNewMovie({ ...newMovie, videoUrl: e.target.value })
-              }
-              placeholder="or add a link"
-              className="w-full p-2 bg-gray-700 rounded-lg"
+              className="w-full p-2 rounded bg-gray-800"
             />
           </div>
         </div>
 
-        {/* Submit Button */}
-        <div className="text-center">
-          <button
-            type="submit"
-            className="px-6 py-2 bg-blue-600 rounded-lg text-white hover:bg-blue-700"
-          >
-            PUBLISH
-          </button>
-        </div>
+        <button
+          type="submit"
+          className="bg-green-600 px-4 py-2 rounded text-white hover:bg-green-700"
+        >
+          Qo‘shish
+        </button>
       </form>
 
-      {/* Movie List */}
-      <div className="mt-6">
-        <h2 className="text-xl font-semibold mb-4">Filmlar</h2>
+      <div className="mt-10">
+        <h2 className="text-xl font-bold mb-4">Episodlar ro‘yxati</h2>
         <ul className="space-y-4">
-          {movies.map((movie) => (
+          {episodes.map((episode) => (
             <li
-              key={movie.id}
-              className="bg-gray-800 p-4 rounded-lg flex justify-between items-center"
+              key={episode.id}
+              className="bg-gray-800 p-4 rounded flex justify-between items-center"
             >
               <div>
-                <span>
-                  {movie.title} - {movie.description}
-                </span>
-                {movie.imageUrl && (
+                <h3 className="font-semibold">{episode.title}</h3>
+                <p className="text-sm text-gray-400">Episod {episode.episodeNumber}</p>
+                {episode.thumbnail && (
                   <img
-                    src={movie.imageUrl}
-                    alt={movie.title}
-                    className="w-16 h-24 object-cover ml-4"
+                    src={episode.thumbnail}
+                    alt={episode.title}
+                    className="w-24 h-36 object-cover mt-2"
                   />
                 )}
-                {movie.videoUrl && (
+                {episode.fileName && (
                   <a
-                    href={movie.videoUrl}
+                    href={episode.fileName}
                     target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-blue-400 ml-4"
+                    rel="noreferrer"
+                    className="block text-blue-400 mt-2"
                   >
                     Videoni ko‘rish
                   </a>
                 )}
               </div>
               <button
-                onClick={() => handleDelete(movie.id)}
-                className="px-3 py-1 bg-red-600 rounded-lg text-white hover:bg-red-700"
+                onClick={() => handleDelete(episode.id)}
+                className="bg-red-600 px-3 py-1 rounded hover:bg-red-700"
               >
                 O‘chirish
               </button>

@@ -1,22 +1,22 @@
 import React, { useState } from 'react';
-import { register } from '../services/api';
+import { signUp } from '../services/api'; // Updated import
 import { useHistory } from 'react-router-dom';
 import image from '../assets/image/image.png';
 
 const Register = () => {
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
-    const history = useHistory(); 
+    const history = useHistory();
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await register(username, password);
-            history.push('/movies');
+            await signUp(email, password);
+            history.push('/series'); // Updated redirect to /series
         } catch (err) {
-            setError(err || 'Ro‘yxatdan o‘tishda xato');
-            console.error('Frontend register xatosi:', err);
+            setError(err.message || 'Registration failed');
+            console.error('Frontend register error:', err);
         }
     };
 
@@ -27,13 +27,13 @@ const Register = () => {
                 {error && <p className="text-red-500 mb-4">{error}</p>}
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-gray-400 mb-2">Username</label>
+                        <label className="block text-gray-400 mb-2">Email</label>
                         <input
-                            type="text"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                             required
-                            placeholder="Enter your username"
+                            placeholder="Enter your email"
                             className="w-full p-2 bg-gray-800 rounded text-white"
                         />
                     </div>
@@ -49,13 +49,8 @@ const Register = () => {
                         />
                     </div>
                     <button type="submit" className="w-full py-2 bg-blue-600 rounded text-white hover:bg-blue-800">
-                        Register
+                        Sign Up
                     </button>
-                    {/* <div className="text-center text-gray-400 my-4">or</div>
-                    <div className="flex justify-between space-x-2">
-                        <button className="w-1/2 py-2 bg-blue-700 rounded text-white text-xl">f</button>
-                        <button className="w-1/2 py-2 bg-red-600 rounded text-white text-xl">G</button>
-                    </div> */}
                     <div className="text-center space-y-2">
                         <a href="/login" className="block text-blue-400 hover:underline">Already have an account? Login</a>
                     </div>

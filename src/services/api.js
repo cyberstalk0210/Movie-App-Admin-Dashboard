@@ -9,7 +9,6 @@ const api = axios.create({
     },
 });
 
-
 api.interceptors.request.use(
     (config) => {
         const token = localStorage.getItem('token');
@@ -62,7 +61,7 @@ export const getSeries = async () => {
 export const getSeriesDetails = async (id) => {
     try {
         const response = await api.get(`/series/${id}`);
-        return response.data; // Returns GetDetailsResponse
+        return response.data; 
     } catch (error) {
         console.error('Error fetching series details:', error.response?.data || error.message);
         throw error.response?.data?.message || 'Failed to fetch series details';
@@ -101,20 +100,31 @@ export const updateEpisode = async (episodeId, episode) => {
     }
 };
 
-export const uploadFile = async (file, type) => {
-    try {
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("type", type);
-        const response = await api.post('/admin/series/upload', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-        });
-        return response.data.url;
-    } catch (error) {
-        console.error('Fayl yuklash xatosi:', error.response?.data || error.message);
-        throw error.response?.data?.message || 'Fayl yuklashda xato';
+export const uploadFile = async (file, type, fileName, seriesId, isEpisode = false, episodeNumber = null, title = "") => {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("type", type);
+    formData.append("fileName", fileName);
+    formData.append("seriesId", seriesId);
+    formData.append("isEpisode", isEpisode);
+    if (isEpisode) {
+      formData.append("episodeNumber", episodeNumber);
+      formData.append("title", title);
     }
+
+    const response = await api.post("/admin/series/upload", formData, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+
+    return response.data.url;
+  } catch (error) {
+    console.error("Fayl yuklash xatosi:", error.response?.data || error.message);
+    throw error.response?.data?.message || "Fayl yuklashda xato";
+  }
 };
+
+
 
 // Admin Episode API: Delete episode
 export const deleteEpisode = async (episodeId) => {
@@ -146,5 +156,16 @@ export const getEpisodesBySeries = async (seriesId) => {
         throw error.response?.data?.message || 'Episodlarni olishda xato';
     }
 };
+
+export const getAllVideos = async () => {
+  const response = await api.get("/admin/series/allVideo"); // route to'g'ri bo'lishi kerak
+  return response.data; // bu List<String> — ya'ni video fayl nomlari yoki URL'lar
+};
+
+export const getAllSeries = async () => {
+  const response = await api.get("/series/all");
+  return response.data; // bu List<SeriesDto>
+};
+
 
 export default api;

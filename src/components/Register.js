@@ -39,7 +39,7 @@ const Register = () => {
                         />
                     </div>
                         <div>
-                        <label className="block text-gray-400 mb-2">Email</label>
+                        <label className="block text-gray-400 mb-2">User Name</label>
                         <input
                             type="text"
                             value={username}

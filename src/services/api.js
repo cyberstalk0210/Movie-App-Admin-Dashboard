@@ -28,26 +28,15 @@ export const createSeries = async (formData) => {
   return response.data;
 };
 
-const bunnyApi = axios.create({
-  baseURL: API_URL + "/admin/bunny",
-});
-bunnyApi.interceptors.request.use((cfg) => {
-  const token = localStorage.getItem("token");
-  if (token) cfg.headers.Authorization = `Bearer ${token}`;
-  return cfg;
-});
 
+export const getAllUsers = async () => {
+  const response = await api.get("/users");
+  return response.data;
+};
 
-export const uploadToBunny = async (file, path,selectedSeriesId) => {
-  const formData = new FormData();
-  formData.append("file", file);
-  formData.append("path", path);
-  formData.append("seriesId", selectedSeriesId);
-  
-  const resp = await bunnyApi.post("/upload", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-  return resp.data.url;
+export const updateUser = async (id, userData) => {
+  const response = await api.put(`/users/${id}`, userData);
+  return response.data;
 };
 
 export const login = async (email, password) => {
@@ -99,7 +88,7 @@ export const getSeriesDetails = async (id) => {
 export const getEpisode = async (seriesId, episodeId) => {
     try {
         const response = await api.get(`/series/${seriesId}/episode/${episodeId}`);
-        return response.data; // Returns EpisodeDto
+        return response.data;
     } catch (error) {
         console.error('Error fetching episode:', error.response?.data || error.message);
         throw error.response?.data?.message || 'Failed to fetch episode';
@@ -109,7 +98,7 @@ export const getEpisode = async (seriesId, episodeId) => {
 
 export const createEpisode = async (seriesId, episode) => {
   try {
-    const response = await api.post(`/admin/series/add-episode`, episode); // <-- yangi endpoint
+    const response = await api.post(`/admin/series/add-episode`, episode);
     return response.data;
   } catch (error) {
     console.error('Error adding episode:', error.response?.data || error.message);
@@ -121,7 +110,7 @@ export const createEpisode = async (seriesId, episode) => {
 export const updateSeries = async (seriesId, series) => {
     try {
         const response = await api.put(`/admin/series/${seriesId}`, series);
-        return response.data; // Returns SeriesDto or response data
+        return response.data;
     } catch (error) {
         console.error('Error updating series:', error.response?.data || error.message);
         throw error.response?.data?.message || 'Failed to update series';
@@ -131,63 +120,10 @@ export const updateSeries = async (seriesId, series) => {
 export const updateEpisode = async (episodeId, episode) => {
     try {
         const response = await api.put(`/admin/series/episodes/${episodeId}`, episode);
-        return response.data; // Returns EpisodeDto or response data
+        return response.data;
     } catch (error) {
         console.error('Error updating episode:', error.response?.data || error.message);
         throw error.response?.data?.message || 'Failed to update episode';
-    }
-};
-
-export const uploadFile = async (file, type, fileName, seriesId, isEpisode = false, episodeNumber = null, title = "") => {
-  try {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("type", type);
-    formData.append("fileName", fileName);
-    formData.append("seriesId", seriesId);
-    formData.append("isEpisode", isEpisode);
-
-    if (isEpisode) {
-      const episodeJson = JSON.stringify({
-        title,
-        episodeNumber,
-        seriesId,
-      });
-      formData.append("episode", episodeJson);
-    }
-
-    const response = await api.post("/admin/series/upload", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-
-    return response.data.url;
-  } catch (error) {
-    console.error("Fayl yuklash xatosi:", error.response?.data || error.message);
-    throw error.response?.data?.message || "Fayl yuklashda xato";
-  }
-};
-
-
-
-
-// Admin Episode API: Delete episode
-export const deleteEpisode = async (episodeId) => {
-    try {
-        await api.delete(`/admin/series/episodes/${episodeId}`);
-    } catch (error) {
-        console.error('Error deleting episode:', error.response?.data || error.message);
-        throw error.response?.data?.message || 'Failed to delete episode';
-    }
-};
-
-// Home API: Get home data for authenticated user
-export const getHomeData = async () => {
-    try {
-        const response = await api.get('/home');
-        return response.data; // Returns HomeResponse
-    } catch (error) {
-        console.error('Error fetching home data:', error.response?.data || error.message);
-        throw error.response?.data?.message || 'Failed to fetch home data';
     }
 };
 
@@ -202,13 +138,13 @@ export const getEpisodesBySeries = async (seriesId) => {
 };
 
 export const getAllVideos = async () => {
-  const response = await api.get("/admin/series/all"); // route to'g'ri bo'lishi kerak
-  return response.data; // bu List<String> — ya'ni video fayl nomlari yoki URL'lar
+  const response = await api.get("/admin/series/all"); 
+  return response.data;
 };
 
 export const getAllSeries = async () => {
   const response = await api.get("/series/all");
-  return response.data; // bu List<SeriesDto>
+  return response.data; 
 };
 
 

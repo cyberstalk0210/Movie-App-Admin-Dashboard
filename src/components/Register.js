@@ -5,6 +5,7 @@ import image from '../assets/image/image.png';
 
 const Register = () => {
     const [email, setEmail] = useState('');
+    const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const history = useHistory();
@@ -12,8 +13,8 @@ const Register = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            await signUp(email, password);
-            history.push('/series'); // Updated redirect to /series
+            await signUp(email, password,username);
+            history.push('/login'); // Updated redirect to /series
         } catch (err) {
             setError(err.message || 'Registration failed');
             console.error('Frontend register error:', err);
@@ -34,6 +35,17 @@ const Register = () => {
                             onChange={(e) => setEmail(e.target.value)}
                             required
                             placeholder="Enter your email"
+                            className="w-full p-2 bg-gray-800 rounded text-white"
+                        />
+                    </div>
+                        <div>
+                        <label className="block text-gray-400 mb-2">Email</label>
+                        <input
+                            type="text"
+                            value={username}
+                            onChange={(e) => setUsername(e.target.value)}
+                            required
+                            placeholder="Enter your username"
                             className="w-full p-2 bg-gray-800 rounded text-white"
                         />
                     </div>

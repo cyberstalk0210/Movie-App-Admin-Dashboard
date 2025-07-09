@@ -1,10 +1,9 @@
 import React, { useState } from "react";
-import api from "../services/api"; // path sizning loyihangiz strukturangizga qarab o‘zgartiriladi
-import { createSeries } from "../services/api"; // API funksiyasini import qilish
+import { createSeries } from "../services/api"; 
 
 const CreateSeries = () => {
   const [title, setTitle] = useState("");
-  const [status, setStatus] = useState("ACTIVE");
+  const [status, setStatus] = useState("COMING_SOON");
   const [image, setImage] = useState(null);
   const [message, setMessage] = useState("");
 

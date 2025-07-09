@@ -3,9 +3,7 @@ import {
   getSeries,
   getEpisodesBySeries,
   createEpisode,
-  uploadToBunny,
 } from "../services/api";
-import Sidebar from "./SideBar";
 
 const Movies = () => {
   const [seriesList, setSeriesList] = useState([]);

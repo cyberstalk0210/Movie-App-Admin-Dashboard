@@ -23,7 +23,7 @@ function App() {
             <ProtectedRoute path="/videolist" component={VideoList} />
             <ProtectedRoute path="/create/series" component={CreateSeries} />
             <ProtectedRoute path="/user-table" component={UsersTable} />
-            <Redirect to="/movies" />
+            <Redirect to="/login" />
           </Switch>
         </Route>
       </Switch>

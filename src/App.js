@@ -8,6 +8,8 @@ import UsersTable from "./components/UserTable";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Sidebar from "./components/SideBar";
 import Register from "./components/Register";
+import SeriesList from "./components/SeriesList";
+import Episode from "./components/Episode";
 
 function App() {
   return (
@@ -23,6 +25,8 @@ function App() {
             <ProtectedRoute path="/videolist" component={VideoList} />
             <ProtectedRoute path="/create/series" component={CreateSeries} />
             <ProtectedRoute path="/user-table" component={UsersTable} />
+            <ProtectedRoute path="/series-list" component={SeriesList} />
+            <ProtectedRoute path="/Episode-list" component={Episode} />
             <Redirect to="/login" />
           </Switch>
         </Route>

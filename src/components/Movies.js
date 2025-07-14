@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  getSeries,
-  getEpisodesBySeries,
-  createEpisode,
-} from "../services/api";
+import { getSeries, getEpisodesBySeries, createEpisode } from "../services/api";
 
 const Movies = () => {
   const [seriesList, setSeriesList] = useState([]);
@@ -12,10 +8,9 @@ const Movies = () => {
   const [newEpisode, setNewEpisode] = useState({
     title: "",
     episodeNumber: "",
+    videoUrl: "",
   });
   const [thumbFile, setThumbFile] = useState(null);
-  const [videoFile, setVideoFile] = useState(null);
-
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -34,43 +29,38 @@ const Movies = () => {
   const handleCreate = async (e) => {
     e.preventDefault();
 
-    if (!selectedSeriesId) {
-      setError("Iltimos, serial tanlang.");
+    if (!selectedSeriesId || !thumbFile) {
+      setError("Serial va rasmni tanlang.");
       return;
     }
 
-    setError("");
-
-    const dto = {
-      title: newEpisode.title,
-      episodeNumber: newEpisode.episodeNumber,
-      thumbnail: "", // optional
-      fileName: newEpisode.title, // optional
-      videoUrl: videoFile, // <-- bu yerda link yuboramiz
-      seriesId: Number(selectedSeriesId),
-    };
+    const formData = new FormData();
+    formData.append("title", newEpisode.title);
+    formData.append("episodeNumber", newEpisode.episodeNumber);
+    formData.append("videoUrl", newEpisode.videoUrl);
+    formData.append("image", thumbFile);
 
     try {
-      const created = await createEpisode(selectedSeriesId, dto);
+      const created = await createEpisode(selectedSeriesId, formData);
       setEpisodes((prev) => [...prev, created]);
 
-      // Formani tozalash
-      setNewEpisode({ title: "", episodeNumber: "" });
-      setVideoFile(""); // link ham bo‘shatilsin
+      // Reset form
+      setNewEpisode({ title: "", episodeNumber: "", videoUrl: "" });
+      setThumbFile(null);
     } catch (err) {
       console.error(err);
       setError("Episod qo‘shishda xatolik: " + err);
     }
   };
 
-return (
+  return (
     <div className="min-h-screen bg-[#0f111a] flex justify-center items-center p-6 ml-64">
       <div className="max-w-md w-full bg-[#1c1e2c] p-8 rounded-xl shadow-lg text-white">
         <h1 className="text-3xl font-bold mb-6 text-center tracking-tight">
           Yangi Epizod Qo‘shish
         </h1>
         {error && (
-          <p className="text-red-400 bg-red-500/10 p Arts 0px p-3 rounded-lg mb-6 animate-pulse text-center">
+          <p className="text-red-400 bg-red-500/10 p-3 rounded-lg mb-6 animate-pulse text-center">
             {error}
           </p>
         )}
@@ -82,7 +72,7 @@ return (
               Serial tanlang:
             </label>
             <select
-              className="w-full p-3 bg-[#0f111a] border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200 text-white"
+              className="w-full p-3 bg-[#0f111a] border border-gray-600 rounded-lg text-white"
               value={selectedSeriesId}
               onChange={(e) => setSelectedSeriesId(e.target.value)}
               required
@@ -103,12 +93,11 @@ return (
             </label>
             <input
               type="text"
-              placeholder="Epizod nomini kiriting"
-              className="w-full p-3 bg-[#0f111a] border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
               value={newEpisode.title}
               onChange={(e) =>
                 setNewEpisode({ ...newEpisode, title: e.target.value })
               }
+              className="w-full p-3 bg-[#0f111a] border border-gray-600 rounded-lg text-white"
               required
             />
           </div>
@@ -120,12 +109,11 @@ return (
             </label>
             <input
               type="number"
-              placeholder="Epizod raqamini kiriting"
-              className="w-full p-3 bg-[#0f111a] border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
               value={newEpisode.episodeNumber}
               onChange={(e) =>
                 setNewEpisode({ ...newEpisode, episodeNumber: e.target.value })
               }
+              className="w-full p-3 bg-[#0f111a] border border-gray-600 rounded-lg text-white"
               required
             />
           </div>
@@ -133,24 +121,52 @@ return (
           {/* Video Link */}
           <div className="space-y-2">
             <label className="block text-sm font-medium text-gray-300">
-              Video Link:
+              Video URL:
             </label>
             <input
               type="text"
-              placeholder="Video URL kiriting"
-              className="w-full p-3 bg-[#0f111a] border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-              value={videoFile || ""}
-              onChange={(e) => setVideoFile(e.target.value)}
+              value={newEpisode.videoUrl}
+              onChange={(e) =>
+                setNewEpisode({ ...newEpisode, videoUrl: e.target.value })
+              }
+              className="w-full p-3 bg-[#0f111a] border border-gray-600 rounded-lg text-white"
               required
             />
           </div>
 
-          {/* Submit Button */}
+          {/* Thumbnail upload */}
+          <div className="space-y-2">
+            <label className="block text-sm font-medium text-gray-300">
+              Epizod rasmi:
+            </label>
+            <div className="flex items-center space-x-4">
+              <label className="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg shadow transition duration-200">
+                <span>
+                  {thumbFile ? "Tanlandi: " + thumbFile.name : "Rasm tanlang"}
+                </span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setThumbFile(e.target.files[0])}
+                  className="hidden"
+                  required
+                />
+              </label>
+              {thumbFile && (
+                <img
+                  src={URL.createObjectURL(thumbFile)}
+                  alt="Preview"
+                  className="w-12 h-12 rounded object-cover border border-gray-600"
+                />
+              )}
+            </div>
+          </div>
+
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition duration-200 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg"
           >
-            Yuborish
+            Epizodni Yaratish
           </button>
         </form>
       </div>

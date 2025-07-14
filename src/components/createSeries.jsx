@@ -100,6 +100,7 @@ const CreateSeries = () => {
             </div>
           </div>
 
+
           {/* Submit Button */}
           <button
             type="submit"

@@ -10,16 +10,21 @@ const Register = () => {
     const [error, setError] = useState('');
     const history = useHistory();
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            await signUp(email, password,username);
-            history.push('/login'); // Updated redirect to /series
-        } catch (err) {
-            setError(err.message || 'Registration failed');
-            console.error('Frontend register error:', err);
-        }
-    };
+const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+        const response = await signUp(email, password, username);
+        const { token, refreshToken } = response;
+        localStorage.setItem('token', token);
+        localStorage.setItem('refreshToken', refreshToken);
+
+        history.push('/login'); // yoki to'g'ridan-to'g'ri bosh sahifa: history.push('/')
+    } catch (err) {
+        setError(err.message || 'Registration failed');
+        console.error('Frontend register error:', err);
+    }
+};
+
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-cover bg-center" style={{ backgroundImage: `url(${image})` }}>

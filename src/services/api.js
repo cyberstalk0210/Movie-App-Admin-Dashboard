@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = "http://localhost:8081";
+const API_URL = "http://localhost:8080";
 
 const api = axios.create({
     baseURL: API_URL,
@@ -9,16 +9,85 @@ const api = axios.create({
     },
 });
 
+
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) {
+      prom.reject(error);
+    } else {
+      prom.resolve(token);
+    }
+  });
+  failedQueue = [];
+};
+
 api.interceptors.request.use(
-    (config) => {
-        const token = localStorage.getItem('token');
-        const isAuthRequest = config.url.startsWith('/auth/');
-        if (token && !isAuthRequest) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error) => Promise.reject(error)
+  (config) => {
+    const token = localStorage.getItem('token');
+    const isAuthRequest = config.url.startsWith('/auth/');
+    if (token && !isAuthRequest) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+
+    if (error.response?.status === 403 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      if (isRefreshing) {
+        return new Promise(function (resolve, reject) {
+          failedQueue.push({ resolve, reject });
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`;
+            return api(originalRequest);
+          })
+          .catch((err) => {
+            return Promise.reject(err);
+          });
+      }
+
+      isRefreshing = true;
+      const refreshToken = localStorage.getItem('refreshToken');
+
+      try {
+        const response = await axios.post(`${API_URL}/auth/refresh`, {
+          refreshToken,
+        });
+
+        const { token: newAccessToken, refreshToken: newRefreshToken } = response.data;
+
+        localStorage.setItem('token', newAccessToken);
+        localStorage.setItem('refreshToken', newRefreshToken);
+
+        api.defaults.headers.Authorization = `Bearer ${newAccessToken}`;
+        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+        processQueue(null, newAccessToken);
+
+        return api(originalRequest);
+      } catch (err) {
+        processQueue(err, null);
+        // localStorage.removeItem('token');
+        // localStorage.removeItem('refreshToken');
+        // window.location.href = '/login';
+        return Promise.reject(err);
+      } finally {
+        isRefreshing = false;
+      }
+    }
+
+    return Promise.reject(error);
+  }
 );
 
 export const createSeries = async (formData) => {
@@ -96,14 +165,13 @@ export const getEpisode = async (seriesId, episodeId) => {
 };
 
 
-export const createEpisode = async (seriesId, episode) => {
-  try {
-    const response = await api.post(`/admin/series/add-episode`, episode);
-    return response.data;
-  } catch (error) {
-    console.error('Error adding episode:', error.response?.data || error.message);
-    throw error.response?.data?.message || 'Failed to add episode';
-  }
+export const createEpisode = async (seriesId, formData) => {
+  const response = await api.post(`/admin/series/${seriesId}/episodes`, formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+  return response.data;
 };
 
 
@@ -145,6 +213,15 @@ export const getAllVideos = async () => {
 export const getAllSeries = async () => {
   const response = await api.get("/series/all");
   return response.data; 
+};
+export const deleteEpisode = async (episodeId) => {
+    try {
+        const response = await api.delete(`/admin/series/episodes/${episodeId}`);
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting episode:', error.response?.data || error.message);
+        throw error.response?.data?.message || 'Failed to delete episode';
+    }
 };
 
 

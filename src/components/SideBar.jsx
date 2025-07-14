@@ -24,12 +24,14 @@ const confirmLogout = () => {
     <div className="fixed top-0 left-0 h-full w-64 bg-[#1c1e2c] text-white p-6 flex flex-col shadow-lg">
       {/* Navigation Buttons */}
       <div className="flex flex-col space-y-4">
+       
         <Link
           to="/create/series"
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200 ease-in-out"
         >
           Seriea yaratish
         </Link>
+       
         <Link
           to="/movies"
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200 ease-in-out"
@@ -42,6 +44,12 @@ const confirmLogout = () => {
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200 ease-in-out"
         >
           Userlar ro‘yxati
+        </Link>
+        <Link
+          to="/series-list"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200 ease-in-out"
+        >
+          Seriea ro‘yxati
         </Link>
         <button
           onClick={handleLogoutClick}

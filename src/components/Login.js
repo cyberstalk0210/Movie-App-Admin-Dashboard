@@ -4,21 +4,25 @@ import { useHistory } from 'react-router-dom';
 import image from '../assets/image/image.png';
 
 const Login = () => {
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const history = useHistory(); 
 
     const handleSubmit = async (e) => {
-        e.preventDefault();
-        try {
-            await login(username, password);
-            history.push('/movies');
-        } catch (err) {
-            setError(err || 'Login yoki parol noto‘g‘ri');
-            console.error('Frontend login xatosi:', err);
-        }
-    };
+    e.preventDefault();
+    try {
+        const response = await login(email, password);
+        const { token, refreshToken } = response;
+        localStorage.setItem('token', token);
+        localStorage.setItem('refreshToken', refreshToken);
+
+        history.push('/movies'); // foydalanuvchi kirgandan keyin yo'naltirish
+    } catch (err) {
+        setError(err.message || 'Login yoki parol noto‘g‘ri');
+        console.error('Frontend login xatosi:', err);
+    }
+};
 
     return (
         <div className="flex items-center justify-center min-h-screen bg-cover bg-center" style={{ backgroundImage: `url(${image})` }}>
@@ -30,8 +34,8 @@ const Login = () => {
                         <label className="block text-gray-400 mb-2">Email</label>
                         <input
                             type="text"
-                            value={username}
-                            onChange={(e) => setUsername(e.target.value)}
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
                             required
                             placeholder="Enter your email"
                             className="w-full p-2 bg-gray-800 rounded text-white"

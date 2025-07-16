@@ -8,6 +8,7 @@ import {
   updateSeries,
 } from '../services/api';
 import Episode from './Episode';
+import api from '../services/api';
 
 const SeriesList = () => {
   const [series, setSeries] = useState([]);
@@ -91,27 +92,30 @@ const SeriesList = () => {
   };
 
   const handleUpdateSeries = async (e) => {
-    e.preventDefault();
-    const form = new FormData();
-    form.append('title', formData.title);
-    form.append('status', formData.status);
-    if (formData.image) {
-      form.append('image', formData.image);
-    }
+  e.preventDefault();
+  const form = new FormData();
+  form.append('title', formData.title);
+  form.append('status', formData.status);
+  if (formData.image) {
+    form.append('image', formData.image);
+  }
 
-    try {
-      const updatedSeries = await updateSeries(editSeries.id, form);
-      setSeries((prev) =>
-        prev.map((s) => (s.id === editSeries.id ? updatedSeries : s))
-      );
-      setEditSeries(null);
-      setFormData({ title: '', episodeNumber: '', videoUrl: '', image: null, status: '' });
-      setError(null);
-    } catch (err) {
-      setError('Failed to update series');
-      console.error('Error updating series:', err);
-    }
-  };
+  try {
+    console.log('Updating series with payload:', formData); // Debug
+    const updatedSeries = await api.put(`/series/${editSeries.id}`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
+    setSeries((prev) =>
+      prev.map((s) => (s.id === editSeries.id ? updatedSeries.data : s))
+    );
+    setEditSeries(null);
+    setFormData({ title: '', episodeNumber: '', videoUrl: '', image: null, status: '' });
+    setError(null);
+  } catch (err) {
+    setError('Failed to update series: ' + (err.response?.data || err.message));
+    console.error('Error updating series:', err.response?.data || err.message);
+  }
+};
 
   const handleUpdateEpisode = async (e) => {
     e.preventDefault();
@@ -194,7 +198,7 @@ const SeriesList = () => {
         {series.map((s) => (
           <div key={s.id} className="bg-white shadow-lg rounded-lg overflow-hidden">
             <img
-              src={`http://localhost:8080${s.imagePath}`}
+              src={`http://37.60.235.197${s.imagePath}`}
               alt={s.title}
               className="w-full h-42 object-contain cursor-pointer"
               onClick={() => handleSeriesClick(s.id)}
@@ -202,12 +206,12 @@ const SeriesList = () => {
             <div className="p-4">
               <h2 className="text-xl font-semibold text-[#2E2F2F]">{s.title}</h2>
               <p className="text-[#757575]">{s.status}</p>
-              {/* <button
+              <button
                 onClick={() => handleEditSeriesClick(s)}
                 className="mt-2 text-[#0288D1] hover:text-[#01579B]"
               >
                 Edit Series
-              </button> */}
+              </button>
               {expandedSeries === s.id && (
                 <div className="mt-4">
                   <h3 className="text-lg font-medium text-[#2E2F2F]">Episodes:</h3>

@@ -3,6 +3,8 @@ import { getAllUsers, updateUser } from "../services/api";
 
 const UsersTable = () => {
   const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState("");
   const [editingUser, setEditingUser] = useState(null);
   const [editForm, setEditForm] = useState({
@@ -14,9 +16,25 @@ const UsersTable = () => {
   // Fetch users on mount
   useEffect(() => {
     getAllUsers()
-      .then(setUsers)
+      .then((data) => {
+        setUsers(data);
+        setFilteredUsers(data);
+      })
       .catch((e) => setError("Foydalanuvchilarni olishda xato: " + e));
   }, []);
+
+  // Handle search input changes
+  const handleSearch = (e) => {
+    const term = e.target.value.toLowerCase();
+    setSearchTerm(term);
+
+    const filtered = users.filter(
+      (user) =>
+        user.username.toLowerCase().includes(term) ||
+        user.email.toLowerCase().includes(term)
+    );
+    setFilteredUsers(filtered);
+  };
 
   // Set form data when editing a user
   const handleEditClick = (user) => {
@@ -52,9 +70,22 @@ const UsersTable = () => {
         email: editForm.email,
         subscription: editForm.subscription,
       });
-      setUsers((prev) =>
-        prev.map((u) => (u.id === updatedUser.id ? updatedUser : u))
-      );
+
+      // Remove the updated user from the current position and append to the end
+      const updatedUsers = users.filter((u) => u.id !== updatedUser.id).concat(updatedUser);
+      setUsers(updatedUsers);
+
+      // Update filteredUsers, maintaining the search filter and appending the updated user
+      const updatedFilteredUsers = filteredUsers
+        .filter((u) => u.id !== updatedUser.id)
+        .concat(
+          updatedUser.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          updatedUser.email.toLowerCase().includes(searchTerm.toLowerCase())
+            ? updatedUser
+            : []
+        );
+      setFilteredUsers(updatedFilteredUsers);
+
       setEditingUser(null);
       setEditForm({ username: "", email: "", subscription: false });
       setError("");
@@ -81,6 +112,17 @@ const UsersTable = () => {
           </p>
         )}
 
+        {/* Search Bar */}
+        <div className="mb-6">
+          <input
+            type="text"
+            placeholder="Username yoki email bo‘yicha qidirish..."
+            value={searchTerm}
+            onChange={handleSearch}
+            className="w-full p-3 bg-[#1c1e2c] border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+          />
+        </div>
+
         {/* Users Table */}
         <div className="bg-[#1c1e2c] rounded-xl shadow-lg overflow-x-auto">
           <table className="w-full text-left text-white">
@@ -93,7 +135,7 @@ const UsersTable = () => {
               </tr>
             </thead>
             <tbody>
-              {users.map((user) => (
+              {filteredUsers.map((user) => (
                 <tr
                   key={user.id}
                   className="border-t border-gray-600 hover:bg-[#2a2c3e] cursor-pointer transition duration-200"
@@ -113,7 +155,7 @@ const UsersTable = () => {
 
         {/* Edit Modal */}
         {editingUser && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div classCanvas="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
             <div className="max-w-md w-full bg-[#1c1e2c] p-8 rounded-xl shadow-lg text-white">
               <h2 className="text-2xl font-bold mb-6 text-center tracking-tight">
                 Foydalanuvchini Tahrirlash

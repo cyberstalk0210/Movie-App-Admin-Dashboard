@@ -11,6 +11,7 @@ const Sidebar = () => {
 const confirmLogout = () => {
   console.log("Logging out...");
   localStorage.removeItem("token");
+  localStorage.removeItem("refreshToken")
   setIsLogoutOpen(false);
   window.location.href = "/login";  
 };

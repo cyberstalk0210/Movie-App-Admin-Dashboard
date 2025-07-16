@@ -14,10 +14,14 @@ const Login = () => {
     try {
         const response = await login(email, password);
         const { token, refreshToken } = response;
+
+        console.log('Login successful:', response);
+
         localStorage.setItem('token', token);
+        
         localStorage.setItem('refreshToken', refreshToken);
 
-        history.push('/movies'); // foydalanuvchi kirgandan keyin yo'naltirish
+        history.push('/movies');
     } catch (err) {
         setError(err.message || 'Login yoki parol noto‘g‘ri');
         console.error('Frontend login xatosi:', err);

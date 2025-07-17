@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 
-const API_URL = "http://localhost:8080";
+const API_URL = "http://http://37.60.235.197:8080";
 
 // Get or generate deviceId
 let deviceId = localStorage.getItem("deviceId");

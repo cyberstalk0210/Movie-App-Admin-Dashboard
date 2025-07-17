@@ -97,6 +97,7 @@ const UsersTable = () => {
   // Close modal
   const handleCloseModal = () => {
     setEditingUser(null);
+    setEditForm({ username: "", email: "", subscription: false });
     setError("");
   };
 
@@ -155,8 +156,8 @@ const UsersTable = () => {
 
         {/* Edit Modal */}
         {editingUser && (
-          <div classCanvas="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="max-w-md w-full bg-[#1c1e2c] p-8 rounded-xl shadow-lg text-white">
+          <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50">
+            <div className="max-w-md w-full bg-[#1c1e2c] p-8 rounded-xl shadow-2xl text-white transform translate-y-0">
               <h2 className="text-2xl font-bold mb-6 text-center tracking-tight">
                 Foydalanuvchini Tahrirlash
               </h2>
@@ -195,7 +196,7 @@ const UsersTable = () => {
 
                 {/* Subscription Checkbox */}
                 <div className="space-y-2">
-                  <label className="flex items-center text-sm font-medium text-gray-300">
+                  <label className="flex items-center text Підписка-sm font-medium text-gray-300">
                     <input
                       type="checkbox"
                       name="subscription"

@@ -1,6 +1,14 @@
 import axios from 'axios';
+import { v4 as uuidv4 } from 'uuid';
 
 const API_URL = "http://localhost:8080";
+
+// Get or generate deviceId
+let deviceId = localStorage.getItem("deviceId");
+if (!deviceId) {
+  deviceId = uuidv4();
+  localStorage.setItem("deviceId", deviceId);
+}
 
 const api = axios.create({
   baseURL: API_URL,
@@ -26,6 +34,7 @@ const processQueue = (error, token = null) => {
 function logout() {
   localStorage.removeItem('token');
   localStorage.removeItem('refreshToken');
+  localStorage.removeItem('deviceId');
   window.location.href = '/login';
 }
 
@@ -33,10 +42,11 @@ function logout() {
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
-    const isAuthRequest = config.url.startsWith('/auth/');
-    if (token && !isAuthRequest) {
+    if (token && !config.url.includes('/auth/')) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    // Add device ID to every request
+    config.headers['X-Device-Id'] = deviceId;
     return config;
   },
   (error) => Promise.reject(error)
@@ -75,7 +85,6 @@ api.interceptors.response.use(
 
       try {
         const response = await axios.post(`${API_URL}/auth/refresh`, { refreshToken });
-
         const { token: newAccessToken, refreshToken: newRefreshToken } = response.data;
 
         localStorage.setItem('token', newAccessToken);
@@ -85,13 +94,10 @@ api.interceptors.response.use(
         originalRequest.headers.Authorization = 'Bearer ' + newAccessToken;
 
         processQueue(null, newAccessToken);
-
         return api(originalRequest);
       } catch (refreshError) {
         if (refreshError.response?.status === 403) {
           logout();
-        } else {
-          console.error("Refresh token ishlamayapti:", refreshError);
         }
         processQueue(refreshError, null);
         return Promise.reject(refreshError);
@@ -104,28 +110,16 @@ api.interceptors.response.use(
   }
 );
 
-// ======== API FUNCTIONLAR ======== //
-
-export const createSeries = async (formData) => {
-  const response = await api.post("/series/add", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-  return response.data;
-};
-
-export const getAllUsers = async () => {
-  const response = await api.get("/users");
-  return response.data;
-};
-
-export const updateUser = async (id, userData) => {
-  const response = await api.put(`/users/${id}`, userData);
-  return response.data;
-};
+// ========== AUTH FUNCTIONS ========== //
 
 export const login = async (email, password) => {
   try {
-    const response = await api.post('/auth/sign-in', { email, password });
+    const response = await api.post('/auth/sign-in', {
+      email,
+      password,
+      deviceId, // Device ID yuboriladi
+    });
+
     const { token, refreshToken } = response.data;
     localStorage.setItem('token', token);
     localStorage.setItem('refreshToken', refreshToken);
@@ -149,58 +143,33 @@ export const signUp = async (email, password, username) => {
   }
 };
 
-export const getSeries = async () => {
-  const response = await api.get('/series/all');
-  return response.data;
-};
+// ========== OTHER API FUNCTIONS ========== //
 
-export const getSeriesDetails = async (id) => {
-  const response = await api.get(`/series/${id}`);
-  return response.data;
-};
+export const getAllUsers = async () => (await api.get("/users")).data;
+export const getAllSeries = async () => (await api.get("/series/all")).data;
+export const getSeries = async () => (await api.get('/series/all')).data;
+export const getSeriesDetails = async (id) => (await api.get(`/series/${id}`)).data;
+export const getEpisodesBySeries = async (seriesId) => (await api.get(`/series/${seriesId}/episodes`)).data;
+export const getEpisode = async (seriesId, episodeId) => (await api.get(`/series/${seriesId}/episode/${episodeId}`)).data;
+export const getAllVideos = async () => (await api.get("/admin/series/all")).data;
 
-export const getEpisode = async (seriesId, episodeId) => {
-  const response = await api.get(`/series/${seriesId}/episode/${episodeId}`);
+export const createSeries = async (formData) => {
+  const response = await api.post("/series/add", formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
   return response.data;
 };
 
 export const createEpisode = async (seriesId, formData) => {
   const response = await api.post(`/admin/series/${seriesId}/episodes`, formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
+    headers: { "Content-Type": "multipart/form-data" },
   });
   return response.data;
 };
 
-export const updateSeries = async (seriesId, series) => {
-  const response = await api.put(`/series/${seriesId}`, series);
-  return response.data;
-};
-
-export const updateEpisode = async (episodeId, episode) => {
-  const response = await api.put(`/admin/series/episodes/${episodeId}`, episode);
-  return response.data;
-};
-
-export const getEpisodesBySeries = async (seriesId) => {
-  const response = await api.get(`/series/${seriesId}/episodes`);
-  return response.data;
-};
-
-export const getAllVideos = async () => {
-  const response = await api.get("/admin/series/all");
-  return response.data;
-};
-
-export const getAllSeries = async () => {
-  const response = await api.get("/series/all");
-  return response.data;
-};
-
-export const deleteEpisode = async (episodeId) => {
-  const response = await api.delete(`/admin/series/episodes/${episodeId}`);
-  return response.data;
-};
+export const updateUser = async (id, userData) => (await api.put(`/users/${id}`, userData)).data;
+export const updateSeries = async (seriesId, series) => (await api.put(`/series/${seriesId}`, series)).data;
+export const updateEpisode = async (episodeId, episode) => (await api.put(`/admin/series/episodes/${episodeId}`, episode)).data;
+export const deleteEpisode = async (episodeId) => (await api.delete(`/admin/series/episodes/${episodeId}`)).data;
 
 export default api;

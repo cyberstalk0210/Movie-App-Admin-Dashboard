@@ -198,7 +198,7 @@ const SeriesList = () => {
         {series.map((s) => (
           <div key={s.id} className="bg-white shadow-lg rounded-lg overflow-hidden">
             <img
-              src={`http://37.60.235.197${s.imagePath}`}
+              src={`http://37.60.235.197:8080${s.imagePath}`}
               alt={s.title}
               className="w-full h-42 object-contain cursor-pointer"
               onClick={() => handleSeriesClick(s.id)}

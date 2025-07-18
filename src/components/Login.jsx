@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { login } from '../services/api';
 import { useHistory } from 'react-router-dom';
 import image from '../assets/image/image.png';
-
+import { GoogleOAuthProvider } from '@react-oauth/google';
+import GoogleLoginButton from './GoogleLoginButton'; 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -63,16 +64,16 @@ const Login = () => {
                     <button type="submit" className="w-full py-2 bg-blue-600 rounded text-white hover:bg-blue-800">
                         SIGN IN
                     </button>
-                    {/* <div className="text-center text-gray-400 my-4">or</div>
-                    <div className="flex justify-between space-x-2">
-                        <button className="w-1/2 py-2 bg-blue-700 rounded text-white text-xl">f</button>
-                        <button className="w-1/2 py-2 bg-red-600 rounded text-white text-xl">G</button>
-                    </div> */}
+    {/* Google login */}
+                    <GoogleOAuthProvider clientId="217544443372-4abbj8tv312iolp8m99pvrkgcfjr9tvn.apps.googleusercontent.com">
+                        <GoogleLoginButton />
+                    </GoogleOAuthProvider>
                     <div className="text-center space-y-2">
                         <a href="/register" className="block text-blue-400 hover:underline">Don't have an account? Sign up</a>
                         <a href="/forgot-password" className="block text-blue-400 hover:underline">Forgot password?</a>
                     </div>
                 </form>
+
             </div>
         </div>
     );

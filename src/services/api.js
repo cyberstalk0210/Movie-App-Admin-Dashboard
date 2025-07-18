@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 
-const API_URL = "http://http://37.60.235.197:8080";
+const API_URL = "http://localhost:8080";
 
 // Get or generate deviceId
 let deviceId = localStorage.getItem("deviceId");
@@ -38,7 +38,7 @@ function logout() {
   window.location.href = '/login';
 }
 
-// ========== Request Interceptor ========== //
+// Request Interceptor
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -46,13 +46,14 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     // Add device ID to every request
+    console.log('Sending X-Device-Id:', deviceId); // Debug log
     config.headers['X-Device-Id'] = deviceId;
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// ========== Response Interceptor ========== //
+// Response Interceptor
 api.interceptors.response.use(
   (response) => response,
   async (error) => {
@@ -110,14 +111,27 @@ api.interceptors.response.use(
   }
 );
 
-// ========== AUTH FUNCTIONS ========== //
+// AUTH FUNCTIONS
+export const googleLogin = async (idToken) => {
+  try {
+    const response = await api.post('/auth/google', {
+      credential: idToken,
+      deviceId, // ✅ deviceId ni yuboramiz
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Google login error:', error.response?.data || error.message);
+    throw error.response?.data?.message || 'Google login failed';
+  }
+};
+
 
 export const login = async (email, password) => {
   try {
     const response = await api.post('/auth/sign-in', {
       email,
       password,
-      deviceId, // Device ID yuboriladi
+      deviceId,
     });
 
     const { token, refreshToken } = response.data;
@@ -143,8 +157,7 @@ export const signUp = async (email, password, username) => {
   }
 };
 
-// ========== OTHER API FUNCTIONS ========== //
-
+// OTHER API FUNCTIONS
 export const getAllUsers = async () => (await api.get("/users")).data;
 export const getAllSeries = async () => (await api.get("/series/all")).data;
 export const getSeries = async () => (await api.get('/series/all')).data;

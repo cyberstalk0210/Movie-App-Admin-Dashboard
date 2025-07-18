@@ -202,7 +202,7 @@ const handleSubmit = async (e) => {
                   className="border rounded-lg p-4 bg-gray-50 hover:shadow-lg transition"
                 >
                   <img
-                    src={"http://localhost:8080"+banner.image}
+                    src={"http://37.60.235.197:8080"+banner.image}
                     alt="Banner"
                     className="w-full h-40 object-cover rounded-md mb-2"
                   />

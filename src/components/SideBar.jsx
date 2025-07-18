@@ -9,7 +9,7 @@ const Sidebar = () => {
   };
 
 const confirmLogout = () => {
-  console.log("Logging out...");
+  // console.log("Logging out...");
   localStorage.removeItem("token");
   localStorage.removeItem("refreshToken")
   setIsLogoutOpen(false);
@@ -52,6 +52,13 @@ const confirmLogout = () => {
         >
           Seriea ro‘yxati
         </Link>
+        <Link
+          to="/banners-list"
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200 ease-in-out"
+        >
+          Banners yaratish
+        </Link>
+
         <button
           onClick={handleLogoutClick}
           className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition duration-200 ease-in-out"

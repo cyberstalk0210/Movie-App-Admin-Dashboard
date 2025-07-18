@@ -11,13 +11,13 @@ const GoogleLoginButton = () => {
     try {
       const { credential } = credentialResponse;
       const decoded = jwtDecode(credential);
-      console.log('Decoded Google payload:', decoded);
+    //   console.log('Decoded Google payload:', decoded);
 
       const response = await googleLogin(credential); // Backendga yuborish
       localStorage.setItem('token', response.token);
       localStorage.setItem('refreshToken', response.refreshToken);
 
-      console.log('Google login successful:', response);
+    //   console.log('Google login successful:', response);
       history.push('/movies');
     } catch (error) {
       console.error('Google Login Error:', error);

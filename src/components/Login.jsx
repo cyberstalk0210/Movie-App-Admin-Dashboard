@@ -16,7 +16,7 @@ const Login = () => {
         const response = await login(email, password);
         const { token, refreshToken } = response;
 
-        console.log('Login successful:', response);
+        // console.log('Login successful:', response);
 
         localStorage.setItem('token', token);
         
@@ -65,9 +65,9 @@ const Login = () => {
                         SIGN IN
                     </button>
     {/* Google login */}
-                    <GoogleOAuthProvider clientId="217544443372-4abbj8tv312iolp8m99pvrkgcfjr9tvn.apps.googleusercontent.com">
+                    {/* <GoogleOAuthProvider clientId="217544443372-4abbj8tv312iolp8m99pvrkgcfjr9tvn.apps.googleusercontent.com">
                         <GoogleLoginButton />
-                    </GoogleOAuthProvider>
+                    </GoogleOAuthProvider> */}
                     <div className="text-center space-y-2">
                         <a href="/register" className="block text-blue-400 hover:underline">Don't have an account? Sign up</a>
                         <a href="/forgot-password" className="block text-blue-400 hover:underline">Forgot password?</a>

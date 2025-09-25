@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 
-const API_URL = "http://37.60.235.197:8080";
+const API_URL = "http://localhost:8080";
 
 // Get or generate deviceId
 let deviceId = localStorage.getItem("deviceId");
@@ -406,4 +406,53 @@ export const updateUser = async (id, userData) => {
   }
 };
 
+export const giveAccessMovie = async (userId, seriesId, paid = true) => {
+  try {
+    const res = await api.post(`/api/access`, null, {
+      params: { userId, seriesId, paid },
+    });
+    return res.data;
+  } catch (err) {
+    console.error("Give access error:", err.response?.data || err.message);
+    throw err;
+  }
+};
+
+export const getAllAccess = async () => {
+  try {
+    const res = await api.get("/api/access");
+    return res.data;
+  } catch (err) {
+    console.error("Get access error:", err.response?.data || err.message);
+    throw err;
+  }
+};
+
+export const getUserAccessedSeries = async (userId) => {
+  try {
+    const res = await api.get(`/api/access/user/${userId}`);
+    return res.data; // Array of seriesId
+  } catch (err) {
+    console.error("Get user accessed series error:", err.response?.data || err.message);
+    return [];
+  }
+};
+
+export const updateUserAccess = async (userId, seriesIds) => {
+  const { data } = await api.put(`/api/access/user/${userId}`, seriesIds);
+  return data;
+};
+
+// Foydalanuvchidan bitta serial accessini o'chirish
+export const deleteAccessMovie = async (userId, movieId) => {
+  const { data } = await api.delete(`api/access`, {
+    params: { userId, movieId },
+  });
+  return data;
+};
+
+export const getAllUsersWithAccess = async () => {
+    const { data } = await api.get("/api/access/all-with-series");
+    return data;
+}
 export default api;

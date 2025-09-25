@@ -1,192 +1,222 @@
 import React, { useState, useEffect } from "react";
-import { getSeries, updateSeries } from "../services/api";
+import {
+  getAllSeries,
+  getAllUsers,
+  getEpisodesBySeries,
+  giveAccessMovie,
+} from "../services/api";
 
 const VideoList = () => {
-  const [seriesList, setSeriesList] = useState([]);
-  const [error, setError] = useState("");
-  const [editingSeries, setEditingSeries] = useState(null);
-  const [editForm, setEditForm] = useState({
-    title: "",
-    status: "ACTIVE",
-    image: null,
-  });
+  const [series, setSeries] = useState([]);
+  const [episodes, setEpisodes] = useState({});
+  const [paidUsers, setPaidUsers] = useState([]);
+  const [openSeriesId, setOpenSeriesId] = useState(null);
+  const [openEpisode, setOpenEpisode] = useState(null);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [search, setSearch] = useState("");
+  const [notification, setNotification] = useState(null);
 
-  // Fetch series list on mount
   useEffect(() => {
-    getSeries()
-      .then(setSeriesList)
-      .catch((e) => setError("Seriallarni olishda xato: " + e));
+    fetchSeries();
+    fetchPaidUsers();
   }, []);
 
-  // Set form data when editing a series
-  const handleEditClick = (series) => {
-    setEditingSeries(series);
-    setEditForm({
-      title: series.title,
-      status: series.status,
-      image: null, // Reset image to allow new upload
-    });
-  };
-
-  // Handle form input changes
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setEditForm((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleImageChange = (e) => {
-    setEditForm((prev) => ({ ...prev, image: e.target.files[0] }));
-  };
-
-  // Handle form submission for editing
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!editForm.title) {
-      setError("Sarlavha kiritilishi shart.");
-      return;
+  useEffect(() => {
+    if (notification) {
+      const timer = setTimeout(() => setNotification(null), 5000);
+      return () => clearTimeout(timer);
     }
+  }, [notification]);
 
+  const fetchSeries = async () => {
     try {
-      const formData = new FormData();
-      formData.append("title", editForm.title);
-      formData.append("status", editForm.status);
-      if (editForm.image) {
-        formData.append("image", editForm.image);
-      }
-
-      const updatedSeries = await updateSeries(editingSeries.id, formData);
-      setSeriesList((prev) =>
-        prev.map((s) => (s.id === updatedSeries.id ? updatedSeries : s))
-      );
-      setEditingSeries(null);
-      setEditForm({ title: "", status: "ACTIVE", image: null });
-      setError("");
-    } catch (err) {
-      setError("Serialni yangilashda xatolik: " + err);
+      const res = await getAllSeries();
+      setSeries(res);
+    } catch (e) {
+      console.error("Series fetch error:", e);
+      setNotification("❌ Failed to load series");
     }
   };
 
-  // Close modal
-  const handleCloseModal = () => {
-    setEditingSeries(null);
-    setError("");
+  const fetchEpisodes = async (seriesId) => {
+    if (episodes[seriesId]) return; // faqat bir marta yuklaymiz
+    try {
+      const res = await getEpisodesBySeries(seriesId);
+      setEpisodes((prev) => ({ ...prev, [seriesId]: res }));
+    } catch (e) {
+      console.error("Episodes fetch error:", e);
+      setNotification("❌ Failed to load episodes");
+    }
   };
+
+  const fetchPaidUsers = async () => {
+    try {
+      const res = await getAllUsers();
+      const filtered = res.filter((u) => u.subscription === true);
+      const sorted = filtered.sort((a, b) =>
+        a.username.localeCompare(b.username)
+      );
+      setPaidUsers(sorted);
+    } catch (e) {
+      console.error("Users fetch error:", e);
+      setNotification("❌ Failed to load users");
+    }
+  };
+
+  const handleSeriesClick = (seriesId) => {
+    setOpenSeriesId((prev) => (prev === seriesId ? null : seriesId));
+    if (!episodes[seriesId]) fetchEpisodes(seriesId);
+  };
+
+  const handleEpisodeClick = (episode) => {
+    setOpenEpisode(episode);
+    setSelectedUsers([]);
+    setSearch("");
+  };
+
+  const handleUserToggle = (userId) => {
+    setSelectedUsers((prev) =>
+      prev.includes(userId)
+        ? prev.filter((id) => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  const handleSaveUsers = async () => {
+    if (!openEpisode) return;
+    try {
+      for (let userId of selectedUsers) {
+        await giveAccessMovie(userId, openEpisode.seriesId, true);
+      }
+      setOpenEpisode(null);
+      setSelectedUsers([]);
+      setNotification("✅ Users assigned successfully");
+    } catch (e) {
+      console.error("Assign users error:", e);
+      const msg =
+        e.response?.data?.message || e.message || "❌ Failed to assign users";
+      setNotification(msg);
+    }
+  };
+
+  const filteredUsers = paidUsers.filter((u) =>
+    u.username.toLowerCase().includes(search.toLowerCase())
+  );
 
   return (
-    <div className="min-h-screen bg-[#0f111a] p-6 ml-64">
-      <h1 className="text-3xl font-bold text-white mb-8 text-center tracking-tight">
-        Seriallar Ro‘yxati
-      </h1>
-      {error && (
-        <p className="text-red-400 bg-red-500/10 p-3 rounded-lg mb-6 text-center animate-pulse">
-          {error}
-        </p>
+    <div className="min-h-screen bg-[#0f111a] p-6 ml-64" >
+      <h2 className="text-2xl text-white font-semibold mb-6">🎬 Video List</h2>
+
+      {/* Notification */}
+      {notification && (
+        <div className="mb-4 p-3 rounded-lg bg-red-100 text-black-700 border text-lg border-red-400">
+          {notification}
+        </div>
       )}
 
-      {/* Series Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {seriesList.map((series) => (
+      {/* Series list */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {series.map((s) => (
           <div
-            key={series.id}
-            className="bg-[#1c1e2c] rounded-xl shadow-lg overflow-hidden cursor-pointer transform transition duration-200 hover:scale-105 hover:shadow-xl"
-            onClick={() => handleEditClick(series)}
+            key={s.id}
+            className="border rounded-xl bg-white shadow hover:shadow-lg transition"
           >
-            <img
-              src={series.image || "https://via.placeholder.com/300x200"}
-              alt={series.title}
-              className="w-full h-48 object-cover"
-            />
-            <div className="p-4">
-              <h3 className="text-lg font-semibold text-white truncate">
-                {series.title}
-              </h3>
+            {/* Series header */}
+            <div
+              className="w-full text-left px-4 py-3 font-medium bg-gray-100 hover:bg-gray-200 rounded-t-xl cursor-pointer"
+              onClick={() => handleSeriesClick(s.id)}
+            >
+              <div className="flex items-center justify-between">
+                <span className="truncate">{s.title}</span>
+                <span className="text-sm text-gray-500">
+                  {openSeriesId === s.id ? "▾" : "▸"}
+                </span>
+              </div>
             </div>
+
+            {/* Episodes */}
+            {openSeriesId === s.id && (
+              <div className="px-4 py-3 space-y-2 border-t">
+                {episodes[s.id]?.map((ep) => (
+                  <div
+                    key={ep.id}
+                    className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
+                  >
+                    <span>{ep.title}</span>
+                    <button
+                      onClick={() => handleEpisodeClick(ep)}
+                      className="bg-blue-600 text-white px-3 py-1 rounded-lg hover:bg-blue-700"
+                    >
+                      Manage Users
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         ))}
       </div>
 
-      {/* Edit Modal */}
-      {editingSeries && (
+      {/* Modal */}
+      {openEpisode && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="max-w-md w-full bg-[#1c1e2c] p-8 rounded-xl shadow-lg text-white">
-            <h2 className="text-2xl font-bold mb-6 text-center tracking-tight">
-              Serialni Tahrirlash
-            </h2>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {/* Title Input */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Sarlavha:
-                </label>
-                <input
-                  type="text"
-                  name="title"
-                  className="w-full p-3 bg-[#0f111a] border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                  value={editForm.title}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="Serial nomini kiriting"
-                />
-              </div>
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-lg">
+            <h3 className="text-lg font-semibold mb-4">
+              Assign Users to{" "}
+              <span className="text-blue-600">{openEpisode.title}</span>
+            </h3>
 
-              {/* Status Select */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Holat:
-                </label>
-                <select
-                  name="status"
-                  className="w-full p-3 bg-[#0f111a] border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
-                  value={editForm.status}
-                  onChange={handleInputChange}
-                >
-                  <option value="ACTIVE">Faol</option>
-                  <option value="INACTIVE">Nofaol</option>
-                </select>
-              </div>
+            {/* Search */}
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full border px-3 py-2 rounded-lg mb-3"
+            />
 
-              {/* Image Upload */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-300">
-                  Rasm yuklash (ixtiyoriy):
-                </label>
-                <div className="relative">
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                    id="image-upload"
-                  />
-                  <label
-                    htmlFor="image-upload"
-                    className="flex items-center justify-center w-full p-3 bg-[#0f111a] border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-700 transition duration-200"
-                  >
-                    <span className="text-gray-300">
-                      {editForm.image ? editForm.image.name : "Rasm tanlang"}
-                    </span>
+            {/* Users */}
+            <div className="max-h-64 overflow-y-auto space-y-2 border p-3 rounded-lg">
+              {filteredUsers.length > 0 ? (
+                filteredUsers.map((user) => (
+                  <label key={user.id} className="flex items-center gap-2">
+                    <input
+                      type="checkbox"
+                      checked={selectedUsers.includes(user.id)}
+                      onChange={() => handleUserToggle(user.id)}
+                      className="h-4 w-4 text-blue-600"
+                    />
+                    <span>{user.username}</span>
                   </label>
-                </div>
-              </div>
+                ))
+              ) : (
+                <p className="text-gray-500">No users found</p>
+              )}
+            </div>
 
-              {/* Buttons */}
-              <div className="flex justify-end space-x-4">
+            {/* Buttons */}
+            <div className="flex justify-between mt-4">
+              <button
+                onClick={() => setOpenEpisode(null)}
+                className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg"
+              >
+                ⬅ Back
+              </button>
+              <div className="flex gap-3">
                 <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition duration-200"
+                  onClick={() => setOpenEpisode(null)}
+                  className="bg-gray-400 hover:bg-gray-500 text-white px-4 py-2 rounded-lg"
                 >
-                  Bekor qilish
+                  Cancel
                 </button>
                 <button
-                  type="submit"
-                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition duration-200 transform hover:scale-105"
+                  onClick={handleSaveUsers}
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
                 >
-                  Saqlash
+                  Save
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}

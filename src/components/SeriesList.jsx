@@ -9,6 +9,14 @@ import {
   deleteSeries,
 } from "../services/api";
 import Episode from "./Episode";
+import { Loader2, X, Plus, Edit3, Trash2, ChevronDown, ChevronUp, Image, Save, AlertTriangle, CheckCircle, Video, List, Zap, Minus } from 'lucide-react';
+
+// Rasm manzilini to'g'rilash uchun yordamchi funksiya
+const getFullImageUrl = (imagePath) => {
+    if (!imagePath) return '';
+    const BASE_URL = 'http://37.60.235.197:8080';
+    return `${BASE_URL}${imagePath}`;
+};
 
 const SeriesList = () => {
   const [series, setSeries] = useState([]);
@@ -28,8 +36,12 @@ const SeriesList = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [formErrors, setFormErrors] = useState({});
   const [imagePreview, setImagePreview] = useState(null);
+  const [addEpisodeSeriesId, setAddEpisodeSeriesId] = useState(null);
   const modalRef = useRef(null);
 
+  // --- LOGIKA: ORIGINAL KODDAN O'ZGARIShSIZ SAQLANGAN ---
+
+  // Original useEffect (data fetch)
   useEffect(() => {
     const fetchSeries = async () => {
       try {
@@ -46,11 +58,13 @@ const SeriesList = () => {
     fetchSeries();
   }, []);
 
+  // Original useEffect (escape key)
   useEffect(() => {
     const handleEscape = (e) => {
-      if (e.key === "Escape" && (editSeries || editEpisode)) {
+      if (e.key === "Escape" && (editSeries || editEpisode || addEpisodeSeriesId)) {
         setEditSeries(null);
         setEditEpisode(null);
+        setAddEpisodeSeriesId(null);
         setFormData({
           title: "",
           episodeNumber: "",
@@ -64,8 +78,9 @@ const SeriesList = () => {
     };
     document.addEventListener("keydown", handleEscape);
     return () => document.removeEventListener("keydown", handleEscape);
-  }, [editSeries, editEpisode]);
+  }, [editSeries, editEpisode, addEpisodeSeriesId]);
 
+  // Original fetchEpisodes
   const fetchEpisodes = async (seriesId) => {
     try {
       const data = await getEpisodesBySeries(seriesId);
@@ -76,6 +91,7 @@ const SeriesList = () => {
     }
   };
 
+  // Original handleSeriesClick
   const handleSeriesClick = (seriesId) => {
     if (expandedSeries === seriesId) {
       setExpandedSeries(null);
@@ -87,18 +103,23 @@ const SeriesList = () => {
     }
   };
 
+  // Original handleEditSeriesClick
   const handleEditSeriesClick = (series) => {
+    setAddEpisodeSeriesId(null); 
     setEditSeries(series);
     setFormData({
       title: series.title,
-      status: series.status,
+      // XATOLIK TUZATILDI: s.status undefined bo'lishi mumkinligini hisobga olib, muqobil qiymat qo'yildi
+      status: series.status || '', 
       image: null,
     });
-    setImagePreview(`http://37.60.235.197:8080${series.imagePath}`);
+    setImagePreview(getFullImageUrl(series.imagePath));
     setFormErrors({});
   };
 
+  // Original handleEditEpisodeClick
   const handleEditEpisodeClick = (episode) => {
+    setAddEpisodeSeriesId(null); 
     setEditEpisode(episode);
     setFormData({
       title: episode.title,
@@ -107,11 +128,12 @@ const SeriesList = () => {
       image: null,
     });
     setImagePreview(
-      episode.imagePath ? `http://37.60.235.197:8080${episode.imagePath}` : null
+      episode.imagePath ? getFullImageUrl(episode.imagePath) : null
     );
     setFormErrors({});
   };
 
+  // Original handleDeleteSeries
   const handleDeleteSeries = async (seriesId) => {
     if (!window.confirm("Are you sure you want to delete this series?")) return;
     try {
@@ -132,12 +154,14 @@ const SeriesList = () => {
     }
   };
 
+  // Original handleInputChange
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
     setFormErrors((prev) => ({ ...prev, [name]: "" }));
   };
 
+  // Original handleFileChange
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     setFormData((prev) => ({ ...prev, image: file }));
@@ -150,6 +174,7 @@ const SeriesList = () => {
     }
   };
 
+  // Original validateForm
   const validateForm = (isEpisode) => {
     const errors = {};
     if (!formData.title.trim()) errors.title = "Title is required";
@@ -164,6 +189,7 @@ const SeriesList = () => {
     return Object.keys(errors).length === 0;
   };
 
+  // Original handleUpdateSeries
   const handleUpdateSeries = async (e) => {
     e.preventDefault();
     if (!validateForm(false)) return;
@@ -198,6 +224,7 @@ const SeriesList = () => {
     }
   };
 
+  // Original handleUpdateEpisode
   const handleUpdateEpisode = async (e) => {
     e.preventDefault();
     if (!validateForm(true)) return;
@@ -236,6 +263,7 @@ const SeriesList = () => {
     }
   };
 
+  // Original handleDeleteEpisode
   const handleDeleteEpisode = async (episodeId, seriesId) => {
     if (!window.confirm("Are you sure you want to delete this episode?"))
       return;
@@ -254,6 +282,7 @@ const SeriesList = () => {
     }
   };
 
+  // Original handleAddEpisode
   const handleAddEpisode = async (e, seriesId) => {
     e.preventDefault();
     if (!validateForm(true)) return;
@@ -272,6 +301,9 @@ const SeriesList = () => {
         ...prev,
         [seriesId]: [...(prev[seriesId] || []), newEpisode],
       }));
+      
+      // Qo'shishdan keyin formani yopish va tozalash
+      setAddEpisodeSeriesId(null);
       setFormData({
         title: "",
         episodeNumber: "",
@@ -289,559 +321,518 @@ const SeriesList = () => {
     }
   };
 
+  // Yangi funksiya: Qo'shish formasini ochish/yopish
+  const toggleAddEpisodeForm = (seriesId) => {
+      // Agar shu serial allaqachon ochiq bo'lsa - yopish
+      if (addEpisodeSeriesId === seriesId) {
+          setAddEpisodeSeriesId(null);
+      } else {
+          // Boshqa formani yopish
+          setEditSeries(null);
+          setEditEpisode(null);
+          // Yangi formani ochish va formData'ni tozalash
+          setAddEpisodeSeriesId(seriesId);
+          setFormData({
+            title: "",
+            episodeNumber: "",
+            videoUrl: "",
+            image: null,
+            status: "",
+          });
+          setImagePreview(null);
+          setFormErrors({});
+      }
+  };
+
+
+  // --- UI QISMI: YANADA YAXSHILANGAN DIZAYN ---
+  
+  // Loader
   if (isLoading) {
     return (
-      <div className="ml-0 md:ml-64 p-4 min-h-screen bg-[#0f111a] flex items-center justify-center">
+      <div className="ml-0 md:ml-64 p-4 min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="flex flex-col items-center">
-          <svg
-            className="animate-spin h-8 w-8 text-[#0288D1]"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              className="opacity-25"
-              cx="12"
-              cy="12"
-              r="10"
-              stroke="currentColor"
-              strokeWidth="4"
-            ></circle>
-            <path
-              className="opacity-75"
-              fill="currentColor"
-              d="M4 12a8 8 0 018-8v8h8a8 8 0 01-8 8 8 8 0 01-8-8z"
-            ></path>
-          </svg>
-          <p className="text-[#fdfdfd] text-lg mt-2">Loading...</p>
+          <Loader2 className="animate-spin h-10 w-10 text-indigo-500" />
+          <p className="text-gray-400 text-lg mt-4">Ma'lumotlar yuklanmoqda...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="ml-0 md:ml-64 p-6 min-h-screen bg-[#0f111a]">
-      <h1 className="text-4xl font-bold mb-8 text-center text-[#fdfdfd] tracking-tight">
-        Kinolar Ro'yxati
+    <div className="ml-0 md:ml-64 p-4 sm:p-6 lg:p-8 min-h-screen bg-gray-900 text-white">
+      <h1 className="text-3xl sm:text-4xl font-extrabold mb-10 text-center text-indigo-400 tracking-wider border-b-2 border-indigo-500/50 pb-3">
+        Serial Kontentni Boshqarish Paneli 📺
       </h1>
+      
+      {/* Xabar Bandi */}
       {error && (
-        <div className="bg-red-100 text-red-700 p-4 rounded-lg mb-6 text-center">
-          {error}
+        <div className="flex items-center bg-red-900/40 text-red-300 p-4 rounded-xl mb-6 shadow-xl border border-red-700/50">
+            <AlertTriangle className="w-5 h-5 mr-3 flex-shrink-0" />
+            <span className="font-medium">Xatolik:</span> {error}
         </div>
       )}
       {success && (
-        <div className="bg-green-100 text-green-700 p-4 rounded-lg mb-6 text-center animate-fade-in">
-          {success}
+        <div className="flex items-center bg-green-900/40 text-green-300 p-4 rounded-xl mb-6 shadow-xl border border-green-700/50 animate-fade-in">
+            <CheckCircle className="w-5 h-5 mr-3 flex-shrink-0" />
+            <span className="font-medium">Muvaffaqiyat:</span> {success}
         </div>
       )}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
+      
+      {/* Seriallar Gridi (Premium Ko'rinish) */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6 sm:gap-8">
         {series.map((s) => (
           <div
             key={s.id}
-            className="bg-white shadow-lg rounded-xl overflow-hidden transform transition hover:shadow-2xl"
+            className="bg-gray-800 shadow-2xl rounded-xl overflow-hidden border border-gray-700/70 transition duration-300 hover:shadow-indigo-500/30 flex flex-col group"
           >
-            <img
-              src={`http://37.60.235.197:8080${s.imagePath}`}
-              alt={s.title}
-              className="w-full h-48 object-contain cursor-pointer"
-              onClick={() => handleSeriesClick(s.id)}
-            />
-            <div className="p-4">
-              <h2 className="text-xl font-semibold text-[#2E2F2F] truncate">
+            {/* Rasm va Kengaytirish Tugmasi */}
+            <div 
+                className="relative w-full h-48 bg-gray-900 cursor-pointer"
+                onClick={() => handleSeriesClick(s.id)}
+            >
+              <img
+                src={getFullImageUrl(s.imagePath)}
+                alt={s.title}
+                className="w-full h-full object-cover transition duration-300 group-hover:opacity-80"
+              />
+              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 transition-opacity">
+                {expandedSeries === s.id ? (
+                    <ChevronUp className="w-10 h-10 text-indigo-400 p-1 bg-gray-900/50 rounded-full" />
+                ) : (
+                    <ChevronDown className="w-10 h-10 text-indigo-400 p-1 bg-gray-900/50 rounded-full" />
+                )}
+              </div>
+            </div>
+            
+            {/* Ma'lumot va Boshqaruv */}
+            <div className="p-4 flex flex-col flex-grow">
+              <h2 className="text-lg font-bold text-white mb-2 truncate" title={s.title}>
                 {s.title}
               </h2>
-              <p className="text-[#757575] text-sm mt-1">{s.status}</p>
-              <div className="mt-3 flex space-x-3">
+              <div className="flex items-center space-x-2 text-sm">
+                  {/* XATOLIK TUZATILDI: s.status mavjudligini tekshirish */}
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                      s.status === 'PUBLISHED' ? 'bg-green-600/20 text-green-400' :
+                      s.status === 'COMING_SOON' ? 'bg-yellow-600/20 text-yellow-400' :
+                      'bg-red-600/20 text-red-400' // UNKNOWN/Undefined uchun rang
+                  }`}>
+                      {s.status ? s.status.replace('_', ' ') : 'NO STATUS'} 
+                  </span>
+              </div>
+              
+              <div className="mt-4 flex space-x-3 border-t border-gray-700 pt-3">
                 <button
                   onClick={() => handleEditSeriesClick(s)}
-                  className="text-[#0288D1] hover:text-[#01579B] font-medium transition-colors relative group"
+                  className="p-2 bg-indigo-600 text-white rounded-lg text-sm transition duration-200 hover:bg-indigo-700 shadow-lg shadow-indigo-500/20 flex items-center"
+                  title="Serialni tahrirlash"
                   aria-label={`Edit series ${s.title}`}
                 >
-                  Edit
-                  <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    Edit Series
-                  </span>
+                  <Edit3 className="w-4 h-4" />
                 </button>
                 <button
                   onClick={() => handleDeleteSeries(s.id)}
-                  className="text-[#D32F2F] hover:text-[#B71C1C] font-medium transition-colors relative group"
+                  className="p-2 bg-red-600 text-white rounded-lg text-sm transition duration-200 hover:bg-red-700 shadow-lg shadow-red-500/20 flex items-center"
+                  title="Serialni o'chirish"
                   aria-label={`Delete series ${s.title}`}
                 >
-                  Delete
-                  <span className="absolute -top-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs rounded py-1 px-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    Delete Series
-                  </span>
+                  <Trash2 className="w-4 h-4" />
                 </button>
               </div>
-              {expandedSeries === s.id && (
-                <div className="mt-4">
-                  <h3 className="text-lg font-medium text-[#2E2F2F] mb-2">
-                    Episodes:
-                  </h3>
-                  {episodes[s.id]?.length > 0 ? (
-                    <ul className="space-y-2">
-                      {episodes[s.id].map((ep) => (
-                        <Episode
-                          key={ep.id}
-                          episode={ep}
-                          seriesId={s.id}
-                          onEdit={handleEditEpisodeClick}
-                          onDelete={handleDeleteEpisode}
-                        />
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-[#757575] text-sm">
-                      No episodes available
-                    </p>
-                  )}
-                  <div className="mt-4">
-                    <h4 className="text-md font-medium text-[#2E2F2F] mb-2">
-                      Add New Episode
-                    </h4>
-                    <form
-                      onSubmit={(e) => handleAddEpisode(e, s.id)}
-                      className="space-y-3"
-                    >
-                      <div>
-                        <label
-                          htmlFor="episode-title"
-                          className="block text-sm font-medium text-[#2E2F2F]"
-                        >
-                          Episode Title <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          id="episode-title"
-                          type="text"
-                          name="title"
-                          value={formData.title}
-                          onChange={handleInputChange}
-                          placeholder="Enter episode title"
-                          className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#0288D1] focus:outline-none ${
-                            formErrors.title
-                              ? "border-red-500"
-                              : "border-[#B0BEC5]"
-                          }`}
-                          aria-required="true"
-                        />
-                        {formErrors.title && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {formErrors.title}
-                          </p>
-                        )}
-                      </div>
-                      <div>
-                        <label
-                          htmlFor="episode-number"
-                          className="block text-sm font-medium text-[#2E2F2F]"
-                        >
-                          Episode Number <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          id="episode-number"
-                          type="number"
-                          name="episodeNumber"
-                          value={formData.episodeNumber}
-                          onChange={handleInputChange}
-                          placeholder="Enter episode number"
-                          className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#0288D1] focus:outline-none ${
-                            formErrors.episodeNumber
-                              ? "border-red-500"
-                              : "border-[#B0BEC5]"
-                          }`}
-                          aria-required="true"
-                        />
-                        {formErrors.episodeNumber && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {formErrors.episodeNumber}
-                          </p>
-                        )}
-                      </div>
-                      <div>
-                        <label
-                          htmlFor="video-url"
-                          className="block text-sm font-medium text-[#2E2F2F]"
-                        >
-                          Video URL <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                          id="video-url"
-                          type="text"
-                          name="videoUrl"
-                          value={formData.videoUrl}
-                          onChange={handleInputChange}
-                          placeholder="Enter video URL"
-                          className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#0288D1] focus:outline-none ${
-                            formErrors.videoUrl
-                              ? "border-red-500"
-                              : "border-[#B0BEC5]"
-                          }`}
-                          aria-required="true"
-                        />
-                        {formErrors.videoUrl && (
-                          <p className="text-red-500 text-xs mt-1">
-                            {formErrors.videoUrl}
-                          </p>
-                        )}
-                      </div>
-                      <div>
-                        <label
-                          htmlFor="episode-image"
-                          className="block text-sm font-medium text-[#2E2F2F]"
-                        >
-                          Episode Image
-                        </label>
-                        <input
-                          id="episode-image"
-                          type="file"
-                          name="image"
-                          onChange={handleFileChange}
-                          className="w-full p-2 border rounded-lg border-[#B0BEC5] text-[#2E2F2F]"
-                          accept="image/*"
-                        />
-                        {imagePreview && (
-                          <img
-                            src={imagePreview}
-                            alt="Preview"
-                            className="mt-2 w-full h-32 object-contain rounded-lg"
-                          />
-                        )}
-                      </div>
-                      <button
-                        type="submit"
-                        className="w-full bg-[#0288D1] text-white px-4 py-2 rounded-lg hover:bg-[#01579B] transition-colors"
-                      >
-                        Add Episode
-                      </button>
-                    </form>
-                  </div>
-                </div>
-              )}
             </div>
+            
+            {/* Epizodlar Ro'yxati va Qo'shish Tugmasi (Expanded qism) */}
+            {expandedSeries === s.id && (
+                <div className="p-4 border-t border-gray-700/70 bg-gray-800/80">
+                    <h3 className="text-sm font-bold text-indigo-400 mb-3 flex items-center space-x-2">
+                        <List className="w-4 h-4"/>
+                        <span>Epizodlar ({episodes[s.id]?.length || 0}):</span>
+                    </h3>
+                    
+                    {/* IXCHAMLASHTIRILGAN EPIZODLAR RO'YXATI */}
+                    <div className="space-y-2 max-h-32 overflow-y-auto pr-1 mb-4 border-b border-gray-700/50 pb-3 custom-scrollbar">
+                      {episodes[s.id]?.length > 0 ? (
+                        episodes[s.id].map((ep) => (
+                          <div key={ep.id} className="flex items-center justify-between text-xs bg-gray-700/50 p-2 rounded-lg hover:bg-gray-700 transition">
+                            <span className="truncate flex items-center space-x-1 font-medium text-gray-300">
+                                <Video className="w-3 h-3 text-blue-400 flex-shrink-0" />
+                                <span>{ep.episodeNumber}. {ep.title}</span>
+                            </span>
+                            <div className="flex space-x-2 flex-shrink-0 ml-2">
+                                <button
+                                    onClick={() => handleEditEpisodeClick(ep)}
+                                    className="text-indigo-400 hover:text-indigo-300 p-0.5"
+                                    title="Tahrirlash"
+                                >
+                                    <Edit3 className="w-3 h-3" />
+                                </button>
+                                <button
+                                    onClick={() => handleDeleteEpisode(ep.id, s.id)}
+                                    className="text-red-400 hover:text-red-300 p-0.5"
+                                    title="O'chirish"
+                                >
+                                    <Trash2 className="w-3 h-3" />
+                                </button>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-gray-500 text-sm italic">Epizodlar mavjud emas.</p>
+                      )}
+                    </div>
+                    
+                    {/* EPIZOD QO'SHISH TOGGLE/DROPDOWN TUGMASI */}
+                    <button
+                        onClick={() => toggleAddEpisodeForm(s.id)}
+                        className={`w-full flex items-center justify-center space-x-2 py-2 rounded-lg text-sm font-bold transition duration-200 shadow-md ${
+                            addEpisodeSeriesId === s.id ? 'bg-red-600 hover:bg-red-700 text-white shadow-red-500/30' : 'bg-green-600 hover:bg-green-700 text-white shadow-green-500/30'
+                        }`}
+                    >
+                        {addEpisodeSeriesId === s.id ? <Minus className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                        <span>{addEpisodeSeriesId === s.id ? "Formani Yopish" : "Yangi Epizod Qo'shish"}</span>
+                    </button>
+                    
+                    {/* EPIZOD QO'SHISH FORMASI (TOGGLEABLE) */}
+                    {addEpisodeSeriesId === s.id && (
+                        <div className="mt-4 p-4 bg-gray-900/50 rounded-xl border border-gray-700/50 shadow-inner animate-fade-in-down">
+                            <h4 className="text-md font-bold text-green-400 mb-3 flex items-center space-x-2">
+                                <Zap className="w-4 h-4"/>
+                                <span>Yangi Epizod Ma'lumotlari</span>
+                            </h4>
+                            <form
+                                onSubmit={(e) => handleAddEpisode(e, s.id)}
+                                className="space-y-3"
+                            >
+                                {/* Title Input */}
+                                <div>
+                                    <label
+                                    htmlFor={`episode-title-add-${s.id}`}
+                                    className="block text-xs font-semibold text-gray-300 uppercase mb-1"
+                                    >
+                                    Sarlavha <span className="text-red-500">*</span>
+                                    </label>
+                                    <input
+                                    id={`episode-title-add-${s.id}`}
+                                    type="text"
+                                    name="title"
+                                    value={formData.title}
+                                    onChange={handleInputChange}
+                                    placeholder="Epizod sarlavhasi"
+                                    className={`w-full p-2.5 bg-gray-800 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-white text-sm ${
+                                        formErrors.title ? "border-red-500" : "border-gray-700"
+                                    }`}
+                                    aria-required="true"
+                                    />
+                                    {formErrors.title && (
+                                    <p className="text-red-400 text-xs mt-1">
+                                        {formErrors.title}
+                                    </p>
+                                    )}
+                                </div>
+                                
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                    {/* Episode Number */}
+                                    <div>
+                                        <label
+                                            htmlFor={`episode-number-add-${s.id}`}
+                                            className="block text-xs font-semibold text-gray-300 uppercase mb-1"
+                                        >
+                                            № <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            id={`episode-number-add-${s.id}`}
+                                            type="number"
+                                            name="episodeNumber"
+                                            value={formData.episodeNumber}
+                                            onChange={handleInputChange}
+                                            placeholder="№"
+                                            className={`w-full p-2.5 bg-gray-800 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-white text-sm ${
+                                            formErrors.episodeNumber
+                                                ? "border-red-500"
+                                                : "border-gray-700"
+                                            }`}
+                                            aria-required="true"
+                                        />
+                                        {formErrors.episodeNumber && (
+                                            <p className="text-red-400 text-xs mt-1">
+                                            {formErrors.episodeNumber}
+                                            </p>
+                                        )}
+                                    </div>
+                                    
+                                    {/* Video URL */}
+                                    <div className="col-span-2">
+                                        <label
+                                            htmlFor={`video-url-add-${s.id}`}
+                                            className="block text-xs font-semibold text-gray-300 uppercase mb-1"
+                                        >
+                                            Video URL <span className="text-red-500">*</span>
+                                        </label>
+                                        <input
+                                            id={`video-url-add-${s.id}`}
+                                            type="text"
+                                            name="videoUrl"
+                                            value={formData.videoUrl}
+                                            onChange={handleInputChange}
+                                            placeholder="Video URL manzili"
+                                            className={`w-full p-2.5 bg-gray-800 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none text-white text-sm ${
+                                            formErrors.videoUrl
+                                                ? "border-red-500"
+                                                : "border-gray-700"
+                                            }`}
+                                            aria-required="true"
+                                        />
+                                        {formErrors.videoUrl && (
+                                            <p className="text-red-400 text-xs mt-1">
+                                            {formErrors.videoUrl}
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                                
+                                {/* Rasm Yuklash */}
+                                <div>
+                                    <label
+                                        htmlFor={`episode-image-add-${s.id}`}
+                                        className="block text-xs font-semibold text-gray-300 uppercase mb-1"
+                                    >
+                                        Rasm (Thumbnail)
+                                    </label>
+                                    <input
+                                        id={`episode-image-add-${s.id}`}
+                                        type="file"
+                                        name="image"
+                                        onChange={handleFileChange}
+                                        className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer"
+                                        accept="image/*"
+                                    />
+                                    {imagePreview && (
+                                        <img
+                                            src={imagePreview}
+                                            alt="Preview"
+                                            className="mt-2 w-full h-24 object-contain rounded-lg border border-gray-600/50"
+                                        />
+                                    )}
+                                </div>
+                                
+                                <button
+                                    type="submit"
+                                    className="w-full bg-indigo-600 text-white px-4 py-2.5 rounded-lg hover:bg-indigo-700 transition-colors font-bold flex items-center justify-center space-x-2 mt-4 shadow-md shadow-indigo-500/30"
+                                >
+                                    <Save className="w-5 h-5" />
+                                    <span>Saqlash va Qo'shish</span>
+                                </button>
+                            </form>
+                        </div>
+                    )}
+                </div>
+            )}
           </div>
         ))}
       </div>
 
+      {/* --- MODAL (Tahrirlash) --- */}
       {(editSeries || editEpisode) && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 animate-fade-in"
+          className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50 p-4 backdrop-blur-sm animate-fade-in"
           role="dialog"
           aria-modal="true"
-          aria-labelledby={
-            editSeries ? "edit-series-title" : "edit-episode-title"
-          }
+          onClick={(e) => e.target === e.currentTarget && (setEditSeries(null) || setEditEpisode(null))} // Click outside to close
           ref={modalRef}
         >
-          <div className="bg-white p-6 rounded-xl w-full max-w-lg transform transition-all duration-300 scale-95">
+          <div className="bg-gray-800 p-6 sm:p-8 rounded-xl w-full max-w-lg shadow-3xl border border-indigo-700/50 transform transition-all duration-300 max-h-[90vh] overflow-y-auto text-white">
+            
+            {/* Modal Sarlavha va Yopish */}
+            <div className="flex justify-between items-center mb-6 border-b border-gray-700/50 pb-3">
+              <h2 className="text-2xl font-bold text-indigo-400">
+                {editSeries ? 'Serialni Tahrirlash' : 'Epizodni Tahrirlash'}
+              </h2>
+              <button
+                onClick={() => { setEditSeries(null); setEditEpisode(null); setFormData({ title: "", episodeNumber: "", videoUrl: "", image: null, status: "" }); setFormErrors({}); setImagePreview(null); }}
+                className="text-gray-400 hover:text-white transition duration-200 p-1 rounded-full hover:bg-gray-700"
+                aria-label="Close modal"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            {/* Modal Xatolik xabari */}
+            {error && (
+              <div className="bg-red-900/40 text-red-300 p-3 rounded-lg mb-4 text-sm border border-red-700">
+                {error}
+              </div>
+            )}
+
             {editSeries ? (
-              <>
-                <div className="flex justify-between items-center mb-4">
-                  <h2
-                    id="edit-series-title"
-                    className="text-xl font-semibold text-[#2E2F2F]"
+              // SERIALNI TAHRIRLASH FORMASI
+              <form onSubmit={handleUpdateSeries} className="space-y-4">
+                {/* Title Input */}
+                <div>
+                  <label htmlFor="series-title" className="block text-sm font-medium text-gray-300 mb-2">
+                    Serial Sarlavhasi <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    id="series-title"
+                    type="text"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    placeholder="Serial nomini kiriting"
+                    className={`w-full p-3 bg-gray-900 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-inner text-white ${formErrors.title ? "border-red-500" : "border-gray-700"}`}
+                    aria-required="true"
+                  />
+                  {formErrors.title && (<p className="text-red-400 text-xs mt-1">{formErrors.title}</p>)}
+                </div>
+                
+                {/* Status Select */}
+                <div>
+                  <label htmlFor="series-status" className="block text-sm font-medium text-gray-300 mb-2">
+                    Holat <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    id="series-status"
+                    name="status"
+                    value={formData.status}
+                    onChange={handleInputChange}
+                    className={`w-full p-3 bg-gray-900 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-inner text-white ${formErrors.status ? "border-red-500" : "border-gray-700"}`}
+                    aria-required="true"
                   >
-                    Edit Series
-                  </h2>
-                  <button
-                    onClick={() => {
-                      setEditSeries(null);
-                      setFormData({
-                        title: "",
-                        episodeNumber: "",
-                        videoUrl: "",
-                        image: null,
-                        status: "",
-                      });
-                      setFormErrors({});
-                      setImagePreview(null);
-                    }}
-                    className="text-[#757575] hover:text-[#2E2F2F] text-xl"
-                    aria-label="Close modal"
-                  >
-                    &times;
+                    <option value="" disabled className='bg-gray-700'>Holatni tanlang</option>
+                    <option value="COMING_SOON" className='bg-gray-700'>Tez kunda</option>
+                    <option value="PUBLISHED" className='bg-gray-700'>Efirda / Nashr etilgan</option>
+                    <option value="UNLISTED" className='bg-gray-700'>Yashirin</option>
+                    <option value="ARCHIVED" className='bg-gray-700'>Arxivlangan</option>
+                    <option value="DRAFT" className='bg-gray-700'>Qoralama</option>
+                    <option value="REMOVED" className='bg-gray-700'>O'chirilgan</option>
+                  </select>
+                  {formErrors.status && (<p className="text-red-400 text-xs mt-1">{formErrors.status}</p>)}
+                </div>
+                
+                {/* Rasm Yuklash */}
+                <div>
+                  <label htmlFor="series-image" className="block text-sm font-medium text-gray-300 mb-2">
+                    Serial Rasmi
+                  </label>
+                  <input
+                    id="series-image"
+                    type="file"
+                    name="image"
+                    onChange={handleFileChange}
+                    className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer"
+                    accept="image/*"
+                  />
+                  {imagePreview && (
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="mt-2 w-24 h-20 object-contain rounded-lg border-2 border-gray-600"
+                    />
+                  )}
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button type="button" onClick={() => { setEditSeries(null); setFormData({ title: "", episodeNumber: "", videoUrl: "", image: null, status: "" }); setFormErrors({}); setImagePreview(null); }}
+                    className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors font-medium">
+                    Bekor qilish
+                  </button>
+                  <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center space-x-2 shadow-md shadow-indigo-500/30">
+                    <Save className="w-4 h-4" />
+                    <span>Saqlash</span>
                   </button>
                 </div>
-                {error && (
-                  <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4">
-                    {error}
-                  </div>
-                )}
-                <form onSubmit={handleUpdateSeries} className="space-y-4">
-                  <div>
-                    <label
-                      htmlFor="series-title"
-                      className="block text-sm font-medium text-[#2E2F2F]"
-                    >
-                      Series Title <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="series-title"
-                      type="text"
-                      name="title"
-                      value={formData.title}
-                      onChange={handleInputChange}
-                      placeholder="Enter series title"
-                      className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#0288D1] focus:outline-none ${
-                        formErrors.title ? "border-red-500" : "border-[#B0BEC5]"
-                      }`}
-                      aria-required="true"
-                    />
-                    {formErrors.title && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {formErrors.title}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="series-status"
-                      className="block text-sm font-medium text-[#2E2F2F]"
-                    >
-                      Status <span className="text-red-500">*</span>
-                    </label>
-                    <select
-                      id="series-status"
-                      name="status"
-                      value={formData.status}
-                      onChange={handleInputChange}
-                      className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#0288D1] focus:outline-none ${
-                        formErrors.status
-                          ? "border-red-500"
-                          : "border-[#B0BEC5]"
-                      }`}
-                      aria-required="true"
-                    >
-                      <option value="" disabled>
-                        Select status
-                      </option>
-                      <option value="COMING_SOON">Tez kunda</option>
-                      <option value="PUBLISHED">Efirda / Nashr etilgan</option>
-                      <option value="UNLISTED">Yashirin</option>
-                      <option value="ARCHIVED">Arxivlangan</option>
-                      <option value="DRAFT">Qoralama</option>
-                      <option value="REMOVED">O'chirilgan</option>
-                    </select>
-                    {formErrors.status && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {formErrors.status}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="series-image"
-                      className="block text-sm font-medium text-[#2E2F2F]"
-                    >
-                      Series Image
-                    </label>
-                    <input
-                      id="series-image"
-                      type="file"
-                      name="image"
-                      onChange={handleFileChange}
-                      className="w-full p-2 border rounded-lg border-[#B0BEC5] text-[#2E2F2F]"
-                      accept="image/*"
-                    />
-                    {imagePreview && (
-                      <img
-                        src={imagePreview}
-                        alt="Preview"
-                        className="mt-2 w-full h-32 object-contain rounded-lg"
-                      />
-                    )}
-                  </div>
-                  <div className="flex justify-end space-x-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditSeries(null);
-                        setFormData({
-                          title: "",
-                          episodeNumber: "",
-                          videoUrl: "",
-                          image: null,
-                          status: "",
-                        });
-                        setFormErrors({});
-                        setImagePreview(null);
-                      }}
-                      className="bg-[#B0BEC5] text-white px-4 py-2 rounded-lg hover:bg-[#90A4AE] transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="bg-[#0288D1] text-white px-4 py-2 rounded-lg hover:bg-[#01579B] transition-colors"
-                    >
-                      Save
-                    </button>
-                  </div>
-                </form>
-              </>
+              </form>
             ) : (
-              <>
-                <div className="flex justify-between items-center mb-4">
-                  <h2
+              // EPIZODNI TAHRIRLASH FORMASI
+              <form onSubmit={handleUpdateEpisode} className="space-y-4">
+                {/* Title Input */}
+                <div>
+                  <label htmlFor="edit-episode-title" className="block text-sm font-medium text-gray-300 mb-2">
+                    Epizod Sarlavhasi <span className="text-red-500">*</span>
+                  </label>
+                  <input
                     id="edit-episode-title"
-                    className="text-xl font-semibold text-[#2E2F2F]"
-                  >
-                    Edit Episode
-                  </h2>
-                  <button
-                    onClick={() => {
-                      setEditEpisode(null);
-                      setFormData({
-                        title: "",
-                        episodeNumber: "",
-                        videoUrl: "",
-                        image: null,
-                        status: "",
-                      });
-                      setFormErrors({});
-                      setImagePreview(null);
-                    }}
-                    className="text-[#757575] hover:text-[#2E2F2F] text-xl"
-                    aria-label="Close modal"
-                  >
-                    &times;
+                    type="text"
+                    name="title"
+                    value={formData.title}
+                    onChange={handleInputChange}
+                    placeholder="Epizod sarlavhasini kiriting"
+                    className={`w-full p-3 bg-gray-900 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-inner text-white ${formErrors.title ? "border-red-500" : "border-gray-700"}`}
+                    aria-required="true"
+                  />
+                  {formErrors.title && (<p className="text-red-400 text-xs mt-1">{formErrors.title}</p>)}
+                </div>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Episode Number */}
+                    <div>
+                        <label htmlFor="edit-episode-number" className="block text-sm font-medium text-gray-300 mb-2">
+                            Epizod Raqami <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            id="edit-episode-number"
+                            type="number"
+                            name="episodeNumber"
+                            value={formData.episodeNumber}
+                            onChange={handleInputChange}
+                            placeholder="Epizod raqamini kiriting"
+                            className={`w-full p-3 bg-gray-900 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-inner text-white ${formErrors.episodeNumber ? "border-red-500" : "border-gray-700"}`}
+                            aria-required="true"
+                        />
+                        {formErrors.episodeNumber && (<p className="text-red-400 text-xs mt-1">{formErrors.episodeNumber}</p>)}
+                    </div>
+                    
+                    {/* Video URL */}
+                    <div>
+                        <label htmlFor="edit-video-url" className="block text-sm font-medium text-gray-300 mb-2">
+                            Video URL <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                            id="edit-video-url"
+                            type="text"
+                            name="videoUrl"
+                            value={formData.videoUrl}
+                            onChange={handleInputChange}
+                            placeholder="Video URL manzilini kiriting"
+                            className={`w-full p-3 bg-gray-900 border rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none shadow-inner text-white ${formErrors.videoUrl ? "border-red-500" : "border-gray-700"}`}
+                            aria-required="true"
+                        />
+                        {formErrors.videoUrl && (<p className="text-red-400 text-xs mt-1">{formErrors.videoUrl}</p>)}
+                    </div>
+                </div>
+
+                {/* Rasm Yuklash */}
+                <div>
+                  <label htmlFor="edit-episode-image" className="block text-sm font-medium text-gray-300 mb-2">
+                    Epizod Rasmi
+                  </label>
+                  <input
+                    id="edit-episode-image"
+                    type="file"
+                    name="image"
+                    onChange={handleFileChange}
+                    className="w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer"
+                    accept="image/*"
+                  />
+                  {imagePreview && (
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="mt-2 w-24 h-20 object-contain rounded-lg border-2 border-gray-600"
+                    />
+                  )}
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button type="button" onClick={() => { setEditEpisode(null); setFormData({ title: "", episodeNumber: "", videoUrl: "", image: null, status: "" }); setFormErrors({}); setImagePreview(null); }}
+                    className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors font-medium">
+                    Bekor qilish
+                  </button>
+                  <button type="submit" className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors font-medium flex items-center space-x-2 shadow-md shadow-indigo-500/30">
+                    <Save className="w-4 h-4" />
+                    <span>Saqlash</span>
                   </button>
                 </div>
-                {error && (
-                  <div className="bg-red-100 text-red-700 p-3 rounded-lg mb-4">
-                    {error}
-                  </div>
-                )}
-                <form onSubmit={handleUpdateEpisode} className="space-y-4">
-                  <div>
-                    <label
-                      htmlFor="edit-episode-title"
-                      className="block text-sm font-medium text-[#2E2F2F]"
-                    >
-                      Episode Title <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="edit-episode-title"
-                      type="text"
-                      name="title"
-                      value={formData.title}
-                      onChange={handleInputChange}
-                      placeholder="Enter episode title"
-                      className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#0288D1] focus:outline-none ${
-                        formErrors.title ? "border-red-500" : "border-[#B0BEC5]"
-                      }`}
-                      aria-required="true"
-                    />
-                    {formErrors.title && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {formErrors.title}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="edit-episode-number"
-                      className="block text-sm font-medium text-[#2E2F2F]"
-                    >
-                      Episode Number <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="edit-episode-number"
-                      type="number"
-                      name="episodeNumber"
-                      value={formData.episodeNumber}
-                      onChange={handleInputChange}
-                      placeholder="Enter episode number"
-                      className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#0288D1] focus:outline-none ${
-                        formErrors.episodeNumber
-                          ? "border-red-500"
-                          : "border-[#B0BEC5]"
-                      }`}
-                      aria-required="true"
-                    />
-                    {formErrors.episodeNumber && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {formErrors.episodeNumber}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="edit-video-url"
-                      className="block text-sm font-medium text-[#2E2F2F]"
-                    >
-                      Video URL <span className="text-red-500">*</span>
-                    </label>
-                    <input
-                      id="edit-video-url"
-                      type="text"
-                      name="videoUrl"
-                      value={formData.videoUrl}
-                      onChange={handleInputChange}
-                      placeholder="Enter video URL"
-                      className={`w-full p-2 border rounded-lg focus:ring-2 focus:ring-[#0288D1] focus:outline-none ${
-                        formErrors.videoUrl
-                          ? "border-red-500"
-                          : "border-[#B0BEC5]"
-                      }`}
-                      aria-required="true"
-                    />
-                    {formErrors.videoUrl && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {formErrors.videoUrl}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label
-                      htmlFor="edit-episode-image"
-                      className="block text-sm font-medium text-[#2E2F2F]"
-                    >
-                      Episode Image
-                    </label>
-                    <input
-                      id="edit-episode-image"
-                      type="file"
-                      name="image"
-                      onChange={handleFileChange}
-                      className="w-full p-2 border rounded-lg border-[#B0BEC5] text-[#2E2F2F]"
-                      accept="image/*"
-                    />
-                    {imagePreview && (
-                      <img
-                        src={imagePreview}
-                        alt="Preview"
-                        className="mt-2 w-full h-32 object-contain rounded-lg"
-                      />
-                    )}
-                  </div>
-                  <div className="flex justify-end space-x-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditEpisode(null);
-                        setFormData({
-                          title: "",
-                          episodeNumber: "",
-                          videoUrl: "",
-                          image: null,
-                          status: "",
-                        });
-                        setFormErrors({});
-                        setImagePreview(null);
-                      }}
-                      className="bg-[#B0BEC5] text-white px-4 py-2 rounded-lg hover:bg-[#90A4AE] transition-colors"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="bg-[#0288D1] text-white px-4 py-2 rounded-lg hover:bg-[#01579B] transition-colors"
-                    >
-                      Save
-                    </button>
-                  </div>
-                </form>
-              </>
+              </form>
             )}
           </div>
         </div>

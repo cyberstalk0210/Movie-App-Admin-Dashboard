@@ -7,6 +7,23 @@ import {
   deleteBanner
 } from '../services/api';
 
+// ***************************************************************
+// !!! MUHIM: BASE_URL ni serveringizning aniq manziliga o'zgartiring !!!
+// Agar backend 37.60.235.197:8080 da ishlayotgan bo'lsa, uni ishlatish kerak.
+const BASE_URL = 'http://37.60.235.197:8080'; 
+
+// Manzilni xavfsiz shakllantirish funksiyasi
+const getFullImageUrl = (imagePath) => {
+    if (!imagePath) return '';
+    if (imagePath.startsWith('http')) return imagePath;
+    
+    // Agar path '/' bilan boshlanmasa, '/' qo'shamiz
+    const cleanPath = imagePath.startsWith('/') ? imagePath : `/${imagePath}`;
+    return `${BASE_URL}${cleanPath}`;
+};
+// ***************************************************************
+
+
 const BannerComponent = () => {
   const [banners, setBanners] = useState([]);
   const [series, setSeries] = useState([]);
@@ -18,6 +35,7 @@ const BannerComponent = () => {
   });
   const [isEditing, setIsEditing] = useState(false);
   const [previewUrl, setPreviewUrl] = useState(null);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     fetchBanners();
@@ -26,61 +44,77 @@ const BannerComponent = () => {
 
   const fetchBanners = async () => {
     try {
-      const data = await getBanners();
-      setBanners(data);
+      const response = await getBanners();
+      const bannersData = Array.isArray(response) ? response : response.banners || [];
+      setBanners(bannersData);
     } catch (error) {
       console.error('Error fetching banners:', error);
+      setError("Bannerlarni yuklashda xatolik.");
+      setBanners([]);
     }
   };
 
   const fetchSeries = async () => {
     try {
       const data = await getSeries();
-      setSeries(data);
+      setSeries(Array.isArray(data) ? data : data.series || []); 
     } catch (error) {
       console.error('Error fetching series:', error);
+      setError("Seriallarni yuklashda xatolik.");
     }
   };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    if (name === 'imageUrl') setPreviewUrl(value);
+    // imageUrl o'zgarganda preview ni yangilash
+    if (name === 'imageUrl') setPreviewUrl(getFullImageUrl(value));
   };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    setFormData({ ...formData, image: file });
-    setPreviewUrl(URL.createObjectURL(file));
+    if (file) {
+      setFormData({ ...formData, image: file });
+      // File yuklanganda URL.createObjectURL orqali preview ni ko'rsatish
+      setPreviewUrl(URL.createObjectURL(file));
+    }
   };
 
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  try {
-    if (!formData.seriesId) return alert('Series tanlang');
-
-    if (!formData.image && !isEditing) {
-      return alert('Iltimos, rasm yuklang');
-    }
-
-    if (isEditing) {
-      if (!formData.image) {
-        return alert("Iltimos, yangi rasm tanlang");
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    try {
+      if (!formData.seriesId) {
+        setError('Iltimos, serialni tanlang.');
+        return;
       }
-      await updateBanner(formData.id, formData.image, formData.seriesId);
-    alert('Banner yangilandi!');
-    } else {
-      await addBanner(formData.seriesId, formData.image);
-      alert('Banner yaratildi!');
-    }
+      if (isEditing && !formData.image) {
+        // Tahrirlashda yangi rasm talab qilinishi
+        setError("Iltimos, bannerni yangilash uchun yangi rasm tanlang.");
+        return;
+      }
+      if (!formData.image && !isEditing) {
+        setError('Iltimos, rasm yuklang.');
+        return;
+      }
+      
+      let message;
+      if (isEditing) {
+        await updateBanner(formData.id, formData.image, formData.seriesId);
+        message = 'Banner muvaffaqiyatli yangilandi!';
+      } else {
+        await addBanner(formData.seriesId, formData.image);
+        message = 'Banner muvaffaqiyatli yaratildi!';
+      }
 
-    resetForm();
-    fetchBanners();
-  } catch (error) {
-    console.error('Error saving banner:', error);
-    alert(error?.response?.data?.message || 'Xatolik yuz berdi');
-  }
-};
+      resetForm();
+      fetchBanners();
+      alert(message);
+    } catch (error) {
+      console.error('Error saving banner:', error);
+      setError(error?.response?.data?.message || 'Saqlashda xatolik yuz berdi.');
+    }
+  };
 
 
   const handleEdit = (banner) => {
@@ -88,22 +122,26 @@ const handleSubmit = async (e) => {
       id: banner.id,
       image: null,
       imageUrl: banner.image,
-      seriesId: banner.series.id
+      seriesId: banner.series?.id || ''
     });
-    setPreviewUrl(banner.image);
+    
+    // getFullImageUrl funksiyasini ishlatish
+    setPreviewUrl(getFullImageUrl(banner.image));
+    
     setIsEditing(true);
+    setError(null);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleDelete = async (id, seriesId) => {
-    if (window.confirm('Are you sure you want to delete this banner?')) {
+    if (window.confirm('Haqiqatan ham ushbu bannerni o‘chirmoqchimisiz?')) {
       try {
         await deleteBanner(id, seriesId);
         fetchBanners();
-        alert('Banner deleted!');
+        alert('Banner o‘chirildi!');
       } catch (error) {
         console.error('Error deleting banner:', error);
-        alert(error?.message || 'Error deleting banner');
+        alert(error?.message || 'Bannerni o‘chirishda xatolik.');
       }
     }
   };
@@ -112,116 +150,150 @@ const handleSubmit = async (e) => {
     setFormData({ id: null, image: null, imageUrl: '', seriesId: '' });
     setPreviewUrl(null);
     setIsEditing(false);
+    setError(null);
   };
 
   return (
-    <div className="ml-64 p-6 bg-gray-100 min-h-screen">
-      <div className="max-w-4xl mx-auto">
+    // Responsive: ml-64 faqat katta ekranlar uchun, kichik ekranlarda to'liq kenglik
+    <div className="bg-[#0f111a] min-h-screen p-4 sm:p-6 lg:p-8 lg:ml-64 text-white">
+      <div className="max-w-6xl mx-auto">
+        
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-3xl font-bold">{isEditing ? 'Edit Banner' : 'Create Banner'}</h1>
-          <p className="text-gray-600">Upload and link banners to a series</p>
+        <div className="mb-8 pt-4">
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-center tracking-tight text-blue-400">
+            {isEditing ? 'Banner Tahrirlash 🛠️' : 'Yangi Banner Yaratish ✨'}
+          </h1>
+          <p className="text-gray-400 text-center mt-2">Seriallar uchun bannerlarni yuklang va boshqaring.</p>
         </div>
+        
+        {/* Xatolik xabari */}
+        {error && (
+            <div className="p-3 mb-6 bg-red-900/40 border border-red-600 rounded-lg text-red-300 text-center shadow-lg">
+                Xatolik: {error}
+            </div>
+        )}
 
-        {/* Form */}
-        <div className="bg-white p-6 rounded-lg shadow-md mb-10">
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-medium mb-1">Series</label>
+        {/* Form Kartasi */}
+        <div className="bg-[#1c1e2c] p-6 sm:p-8 rounded-xl shadow-2xl border border-gray-700 mb-12">
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            
+            {/* Series Tanlash */}
+            <div className='lg:col-span-1'>
+              <label className="block text-sm font-medium mb-2 text-gray-300">Serialni tanlang</label>
               <select
                 name="seriesId"
                 value={formData.seriesId}
                 onChange={handleInputChange}
-                className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-200"
+                className="block w-full p-3 bg-[#0f111a] border border-gray-600 rounded-lg text-white focus:ring-blue-500 focus:border-blue-500 shadow-inner"
                 required
               >
-                <option value="">-- Select a series --</option>
+                <option value="">-- Serial tanlanmagan --</option>
                 {series.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {`${s.title}` || `Series ${s.id}`}
+                  <option key={s.id} value={s.id} className='bg-[#1c1e2c] text-white'>
+                    {s.title || `Series ID: ${s.id}`}
                   </option>
                 ))}
               </select>
             </div>
 
-            <div>
-  <label className="block text-sm font-medium mb-1">
-    {isEditing ? 'Upload New Image' : 'Upload Image'}
-  </label>
-  <input
-    type="file"
-    name="image"
-    onChange={handleFileChange}
-    accept="image/*"
-    className="block w-full text-sm file:py-2 file:px-4 file:rounded-md file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
-    required={!isEditing}
-  />
-</div>
-
-            {previewUrl && (
-              <div className="col-span-2">
-                <label className="block text-sm font-medium mb-1">Preview</label>
-                <img
-                  src={previewUrl}
-                  alt="Preview"
-                  className="w-full max-h-64 object-contain rounded-md border"
+            {/* Rasm Yuklash */}
+            <div className='lg:col-span-1'>
+                <label className="block text-sm font-medium mb-2 text-gray-300">
+                    {isEditing ? 'Yangi rasmni yuklash (Kerakli)' : 'Rasmni yuklash'}
+                </label>
+                <input
+                    type="file"
+                    name="image"
+                    onChange={handleFileChange}
+                    accept="image/*"
+                    // Tailwind file input dizayni
+                    className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 
+                        file:rounded-lg file:border-0 file:text-sm file:font-semibold
+                        file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer
+                        bg-[#0f111a] border border-gray-600 rounded-lg p-1.5
+                    "
+                    required={!isEditing}
                 />
+            </div>
+
+            {/* Rasm Preview */}
+            {previewUrl && (
+              <div className="col-span-1 lg:col-span-2">
+                <label className="block text-sm font-medium mb-2 text-gray-300">Rasm Ko‘rinishi</label>
+                <div className='w-full h-auto max-h-80 overflow-hidden rounded-xl border-4 border-gray-700 shadow-xl bg-gray-900'>
+                    <img
+                        src={previewUrl}
+                        alt="Banner Preview"
+                        className="w-full h-full object-contain"
+                    />
+                </div>
               </div>
             )}
 
-            <div className="col-span-2 flex gap-2">
+            {/* Tugmalar */}
+            <div className="col-span-1 lg:col-span-2 flex flex-wrap gap-4 pt-4 justify-start">
               <button
                 type="submit"
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-xl hover:bg-blue-700 transition duration-300 shadow-lg min-w-[120px]"
               >
-                {isEditing ? 'Update' : 'Create'}
+                {isEditing ? 'Yangilash (Update)' : 'Yaratish (Create)'}
               </button>
               {isEditing && (
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="px-4 py-2 bg-gray-300 text-gray-800 rounded-md hover:bg-gray-400"
+                  className="px-6 py-3 bg-red-600 text-white font-semibold rounded-xl hover:bg-red-700 transition duration-300 shadow-lg min-w-[120px]"
                 >
-                  Cancel
+                  Bekor qilish
                 </button>
               )}
             </div>
           </form>
         </div>
 
-        {/* Banner List */}
-        <div className="bg-white p-6 rounded-lg shadow-md">
-          <h2 className="text-xl font-semibold mb-4">Existing Banners</h2>
+        {/* Bannerlar Ro'yxati */}
+        <div className="bg-[#1c1e2c] p-6 sm:p-8 rounded-xl shadow-2xl border border-gray-700">
+          <h2 className="text-2xl font-bold mb-6 text-yellow-400">Mavjud Bannerlar 🖼️</h2>
+          
           {banners.length === 0 ? (
-            <p className="text-gray-500">No banners available</p>
+            <p className="text-gray-500 text-center py-8">Hozircha hech qanday banner mavjud emas.</p>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            // Responsive Grid: Mobil - 1 ustun, Planshet - 2 ustun, Desktop - 3 ustun
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {banners.map((banner) => (
                 <div
                   key={banner.id}
-                  className="border rounded-lg p-4 bg-gray-50 hover:shadow-lg transition"
+                  className="bg-[#0f111a] rounded-xl overflow-hidden shadow-xl border border-gray-700 transition duration-300 hover:scale-[1.02]"
                 >
-                  <img
-                    src={"http://37.60.235.197:8080"+banner.image}
-                    alt="Banner"
-                    className="w-full h-40 object-cover rounded-md mb-2"
-                  />
-                  <p className="text-sm text-gray-700 font-medium">
-                    Series: {banner.series?.name || `Series ${banner.series?.id}`}
-                  </p>
-                  <div className="mt-2 flex justify-end gap-2">
-                    <button
-                      onClick={() => handleEdit(banner)}
-                      className="px-3 py-1 text-sm bg-blue-500 text-white rounded-md hover:bg-blue-600"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => handleDelete(banner.id, banner.series.id)}
-                      className="px-3 py-1 text-sm bg-red-500 text-white rounded-md hover:bg-red-600"
-                    >
-                      Delete
-                    </button>
+                  {/* Banner rasmi */}
+                  <div className='w-full h-40 overflow-hidden bg-gray-900'>
+                     <img
+                        // getFullImageUrl funksiyasini ishlatish
+                        src={getFullImageUrl(banner.image)}
+                        alt="Banner"
+                        className="w-full h-full object-cover transition duration-500 hover:opacity-80"
+                      />
+                  </div>
+                  
+                  {/* Ma'lumot va tugmalar */}
+                  <div className='p-4'>
+                    <p className="text-sm text-gray-300 font-medium mb-3">
+                        Serial: <span className='text-blue-400 font-semibold'>{banner.series?.title || `ID: ${banner.series?.id}`}</span>
+                    </p>
+                    <div className="flex justify-between gap-3">
+                      <button
+                        onClick={() => handleEdit(banner)}
+                        className="flex-1 px-3 py-2 text-sm bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition font-medium"
+                      >
+                        Tahrirlash
+                      </button>
+                      <button
+                        onClick={() => handleDelete(banner.id, banner.series.id)}
+                        className="flex-1 px-3 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
+                      >
+                        O‘chirish
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}

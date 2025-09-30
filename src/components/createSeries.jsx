@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { createSeries } from "../services/api"; 
+import { Upload, XCircle, CheckCircle } from 'lucide-react'; // Keling, zamonaviy ikonkalarni qo'shamiz
 
 const CreateSeries = () => {
   const [title, setTitle] = useState("");
@@ -15,7 +16,9 @@ const CreateSeries = () => {
     e.preventDefault();
 
     if (!title || !image) {
-      return setMessage("Barcha maydonlarni to‘ldiring.");
+      // Message UI ga moslash
+      setMessage("Barcha maydonlarni to‘ldiring.");
+      return;
     }
 
     try {
@@ -25,30 +28,42 @@ const CreateSeries = () => {
       formData.append("image", image);
 
       const res = await createSeries(formData);
-      setMessage(`Yangi series yaratildi. ID: ${res.id}`);
+      setMessage(`✅ Yangi series muvaffaqiyatli yaratildi. ID: ${res.id}`);
       setTitle("");
       setImage(null);
+      setStatus("COMING_SOON"); // Saqlashdan keyin statusni qaytarish
     } catch (error) {
       console.error(error);
-      setMessage("Xatolik yuz berdi.");
+      setMessage("❌ Xatolik yuz berdi. Series yaratilmadi.");
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#0f111a] flex justify-center items-center p-6 ml-64">
-      <div className="max-w-md w-full bg-[#1c1e2c] p-8 rounded-xl shadow-lg text-white">
-        <h2 className="text-3xl font-bold mb-6 text-center tracking-tight">
-          Yangi Series Yaratish
-        </h2>
+    // Responsive: Kichik ekranlarda chap margin (ml-64) olib tashlanadi
+    <div className="min-h-screen bg-[#0f111a] flex justify-center items-center p-4 sm:p-6 lg:p-8 lg:ml-64 text-white">
+      
+      {/* Kartaning kengligi va stili */}
+      <div className="max-w-xl w-full bg-[#1c1e2c] p-6 sm:p-8 rounded-2xl shadow-2xl border border-gray-700">
+        
+        {/* Sarlavha */}
+        <div className="mb-8">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-center tracking-tight text-blue-400">
+                Series Yaratish ✨
+            </h2>
+            <p className="text-gray-400 text-center mt-2 text-sm">Series haqidagi asosiy ma'lumotlarni kiriting.</p>
+        </div>
+        
+        {/* Form Elementlari */}
         <form onSubmit={handleSubmit} className="space-y-6">
+          
           {/* Title Input */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-300">
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-300">
               Sarlavha:
             </label>
             <input
               type="text"
-              className="w-full p-3 bg-[#0f111a] border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+              className="w-full p-3 bg-[#0f111a] border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 placeholder-gray-500 shadow-inner"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
@@ -57,28 +72,28 @@ const CreateSeries = () => {
           </div>
 
           {/* Status Select */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-300">
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-300">
               Holat:
             </label>
             <select
-              className="w-full p-3 bg-[#0f111a] border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition duration-200"
+              className="w-full p-3 bg-[#0f111a] border border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-white shadow-inner appearance-none cursor-pointer"
               value={status}
               onChange={(e) => setStatus(e.target.value)}
             >
-            <option value="COMING_SOON">Tez kunda</option>
-            <option value="PUBLISHED">Efirda / Nashr etilgan</option>
-            <option value="UNLISTED">Yashirin</option>
-            <option value="ARCHIVED">Arxivlangan</option>
-            <option value="DRAFT">Qoralama</option>
-            <option value="REMOVED">O'chirilgan</option>
-</select>
+              <option value="COMING_SOON" className='bg-[#1c1e2c]'>Tez kunda</option>
+              <option value="PUBLISHED" className='bg-[#1c1e2c]'>Efirda / Nashr etilgan</option>
+              <option value="UNLISTED" className='bg-[#1c1e2c]'>Yashirin</option>
+              <option value="ARCHIVED" className='bg-[#1c1e2c]'>Arxivlangan</option>
+              <option value="DRAFT" className='bg-[#1c1e2c]'>Qoralama</option>
+              <option value="REMOVED" className='bg-[#1c1e2c]'>O'chirilgan</option>
+            </select>
           </div>
 
           {/* Image Upload */}
-          <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-300">
-              Rasm yuklash:
+          <div>
+            <label className="block text-sm font-medium mb-2 text-gray-300">
+              Poster yuklash: (Maks. 5MB)
             </label>
             <div className="relative">
               <input
@@ -91,35 +106,54 @@ const CreateSeries = () => {
               />
               <label
                 htmlFor="image-upload"
-                className="flex items-center justify-center w-full p-3 bg-[#0f111a] border border-gray-600 rounded-lg cursor-pointer hover:bg-gray-700 transition duration-200"
+                className={`flex items-center justify-between w-full p-3 border rounded-lg cursor-pointer transition duration-300
+                  ${image 
+                      ? 'bg-green-800/20 border-green-600 hover:bg-green-800/40' 
+                      : 'bg-[#0f111a] border-gray-600 hover:bg-gray-700/50'
+                  }
+                `}
               >
-                <span className="text-gray-300">
-                  {image ? image.name : "Rasm tanlang"}
-                </span>
+                <div className="flex items-center space-x-3 truncate">
+                    {image ? (
+                        <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+                    ) : (
+                        <Upload className="w-5 h-5 text-gray-400 flex-shrink-0" />
+                    )}
+                    <span className={`truncate ${image ? 'text-green-400' : 'text-gray-400'}`}>
+                    {image ? image.name : "Rasmni tanlash uchun bosing"}
+                    </span>
+                </div>
+                
+                {image && (
+                    <XCircle 
+                        className="w-5 h-5 text-red-400 hover:text-red-500 cursor-pointer flex-shrink-0" 
+                        onClick={(e) => { e.preventDefault(); e.stopPropagation(); setImage(null); }}
+                        title="Rasmni o'chirish"
+                    />
+                )}
               </label>
             </div>
           </div>
 
-
           {/* Submit Button */}
           <button
             type="submit"
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition duration-200 ease-in-out transform hover:scale-105"
+            className="w-full bg-indigo-600 text-white font-bold py-3 rounded-lg hover:bg-indigo-700 transition duration-300 ease-in-out shadow-lg shadow-indigo-500/50 transform hover:-translate-y-0.5"
           >
-            Saqlash
+            ➕ Seriesni Saqlash
           </button>
 
           {/* Message */}
           {message && (
-            <p
-              className={`text-sm mt-4 text-center ${
-                message.includes("Xatolik")
-                  ? "text-red-400 animate-pulse"
-                  : "text-green-400 animate-fade-in"
-              }`}
+            <div
+                className={`p-3 rounded-lg text-center font-medium ${
+                    message.startsWith("❌")
+                        ? "bg-red-900/40 border border-red-600 text-red-300"
+                        : "bg-green-900/40 border border-green-600 text-green-300"
+                } transition-all duration-500 ease-in-out`}
             >
               {message}
-            </p>
+            </div>
           )}
         </form>
       </div>

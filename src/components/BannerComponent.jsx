@@ -8,9 +8,8 @@ import {
 } from '../services/api';
 
 // ***************************************************************
-// !!! MUHIM: BASE_URL ni serveringizning aniq manziliga o'zgartiring !!!
-// Agar backend 37.60.235.197:8080 da ishlayotgan bo'lsa, uni ishlatish kerak.
-const BASE_URL = 'http://37.60.235.197:8080'; 
+// BASE_URL server manzilini to'g'irlashni unutmang!
+const BASE_URL = 'http://localhost:8080'; 
 
 // Manzilni xavfsiz shakllantirish funksiyasi
 const getFullImageUrl = (imagePath) => {
@@ -45,6 +44,7 @@ const BannerComponent = () => {
   const fetchBanners = async () => {
     try {
       const response = await getBanners();
+      // Server endi BannerDto array qaytarishi kutilmoqda
       const bannersData = Array.isArray(response) ? response : response.banners || [];
       setBanners(bannersData);
     } catch (error) {
@@ -67,7 +67,6 @@ const BannerComponent = () => {
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setFormData({ ...formData, [name]: value });
-    // imageUrl o'zgarganda preview ni yangilash
     if (name === 'imageUrl') setPreviewUrl(getFullImageUrl(value));
   };
 
@@ -75,46 +74,45 @@ const BannerComponent = () => {
     const file = e.target.files[0];
     if (file) {
       setFormData({ ...formData, image: file });
-      // File yuklanganda URL.createObjectURL orqali preview ni ko'rsatish
       setPreviewUrl(URL.createObjectURL(file));
     }
   };
 
-  const handleSubmit = async (e) => {
+ const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
     try {
-      if (!formData.seriesId) {
-        setError('Iltimos, serialni tanlang.');
-        return;
-      }
-      if (isEditing && !formData.image) {
-        // Tahrirlashda yangi rasm talab qilinishi
-        setError("Iltimos, bannerni yangilash uchun yangi rasm tanlang.");
-        return;
-      }
-      if (!formData.image && !isEditing) {
-        setError('Iltimos, rasm yuklang.');
-        return;
-      }
-      
-      let message;
-      if (isEditing) {
-        await updateBanner(formData.id, formData.image, formData.seriesId);
-        message = 'Banner muvaffaqiyatli yangilandi!';
-      } else {
-        await addBanner(formData.seriesId, formData.image);
-        message = 'Banner muvaffaqiyatli yaratildi!';
-      }
+        if (!formData.seriesId) {
+            setError('Iltimos, serialni tanlang.');
+            return;
+        }
+        
+        if (!formData.image && !isEditing) {
+             setError('Iltimos, rasm yuklang.');
+             return;
+        }
+        if (isEditing && !formData.image && !formData.imageUrl) {
+             setError('Banner rasmi mavjud emas. Iltimos, yangi rasm yuklang.');
+             return;
+        }
 
-      resetForm();
-      fetchBanners();
-      alert(message);
+        let message;
+        if (isEditing) {
+            await updateBanner(formData.id, formData.image, formData.imageUrl, formData.seriesId); 
+            message = 'Banner muvaffaqiyatli yangilandi!';
+        } else {
+            await addBanner(formData.seriesId, formData.image);
+            message = 'Banner muvaffaqiyatli yaratildi!';
+        }
+
+        resetForm();
+        fetchBanners();
+        alert(message);
     } catch (error) {
-      console.error('Error saving banner:', error);
-      setError(error?.response?.data?.message || 'Saqlashda xatolik yuz berdi.');
+        console.error('Error saving banner:', error);
+        setError(error?.response?.data?.message || 'Saqlashda xatolik yuz berdi.');
     }
-  };
+};
 
 
   const handleEdit = (banner) => {
@@ -122,10 +120,10 @@ const BannerComponent = () => {
       id: banner.id,
       image: null,
       imageUrl: banner.image,
-      seriesId: banner.series?.id || ''
+      // ✨ TUZATISH: Endi to'g'ridan-to'g'ri banner.seriesId ishlatilmoqda
+      seriesId: banner.seriesId || '' 
     });
     
-    // getFullImageUrl funksiyasini ishlatish
     setPreviewUrl(getFullImageUrl(banner.image));
     
     setIsEditing(true);
@@ -134,9 +132,14 @@ const BannerComponent = () => {
   };
 
   const handleDelete = async (id, seriesId) => {
+    if (!seriesId) {
+        if (!window.confirm('Bu banner serial bilan bog‘lanmagan. O‘chirishni davom ettirasizmi?')) return;
+    }
+      
     if (window.confirm('Haqiqatan ham ushbu bannerni o‘chirmoqchimisiz?')) {
       try {
-        await deleteBanner(id, seriesId);
+        // seriesId to'g'ri kelayotgani uchun funksiya chaqiruvi o'zgarishsiz qoldi
+        await deleteBanner(id, seriesId); 
         fetchBanners();
         alert('Banner o‘chirildi!');
       } catch (error) {
@@ -154,7 +157,6 @@ const BannerComponent = () => {
   };
 
   return (
-    // Responsive: ml-64 faqat katta ekranlar uchun, kichik ekranlarda to'liq kenglik
     <div className="bg-[#0f111a] min-h-screen p-4 sm:p-6 lg:p-8 lg:ml-64 text-white">
       <div className="max-w-6xl mx-auto">
         
@@ -196,23 +198,25 @@ const BannerComponent = () => {
               </select>
             </div>
 
+            {/* Rasm Yuklash va Preview qismlari o'zgarishsiz qoldi */}
+            {/* ... */}
+            
             {/* Rasm Yuklash */}
             <div className='lg:col-span-1'>
                 <label className="block text-sm font-medium mb-2 text-gray-300">
-                    {isEditing ? 'Yangi rasmni yuklash (Kerakli)' : 'Rasmni yuklash'}
+                    {isEditing ? 'Yangi rasmni yuklash (Agar o\'zgartirmoqchi bo\'lsangiz)' : 'Rasmni yuklash'}
                 </label>
                 <input
                     type="file"
                     name="image"
                     onChange={handleFileChange}
                     accept="image/*"
-                    // Tailwind file input dizayni
                     className="block w-full text-sm text-gray-300 file:mr-4 file:py-2 file:px-4 
                         file:rounded-lg file:border-0 file:text-sm file:font-semibold
                         file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer
                         bg-[#0f111a] border border-gray-600 rounded-lg p-1.5
                     "
-                    required={!isEditing}
+                    required={!isEditing && !formData.imageUrl} 
                 />
             </div>
 
@@ -258,7 +262,6 @@ const BannerComponent = () => {
           {banners.length === 0 ? (
             <p className="text-gray-500 text-center py-8">Hozircha hech qanday banner mavjud emas.</p>
           ) : (
-            // Responsive Grid: Mobil - 1 ustun, Planshet - 2 ustun, Desktop - 3 ustun
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {banners.map((banner) => (
                 <div
@@ -268,7 +271,6 @@ const BannerComponent = () => {
                   {/* Banner rasmi */}
                   <div className='w-full h-40 overflow-hidden bg-gray-900'>
                      <img
-                        // getFullImageUrl funksiyasini ishlatish
                         src={getFullImageUrl(banner.image)}
                         alt="Banner"
                         className="w-full h-full object-cover transition duration-500 hover:opacity-80"
@@ -278,7 +280,10 @@ const BannerComponent = () => {
                   {/* Ma'lumot va tugmalar */}
                   <div className='p-4'>
                     <p className="text-sm text-gray-300 font-medium mb-3">
-                        Serial: <span className='text-blue-400 font-semibold'>{banner.series?.title || `ID: ${banner.series?.id}`}</span>
+                        Serial: <span className='text-blue-400 font-semibold'>
+                            {/* ✨ TUZATISH: banner.seriesTitle (yoki seriesId) ishlatilmoqda */}
+                            {banner.seriesTitle || (banner.seriesId ? `ID: ${banner.seriesId}` : 'Serial ma\'lumoti yo\'q')}
+                        </span>
                     </p>
                     <div className="flex justify-between gap-3">
                       <button
@@ -288,7 +293,8 @@ const BannerComponent = () => {
                         Tahrirlash
                       </button>
                       <button
-                        onClick={() => handleDelete(banner.id, banner.series.id)}
+                        // ✨ TUZATISH: To'g'ridan-to'g'ri banner.seriesId ishlatilmoqda
+                        onClick={() => handleDelete(banner.id, banner.seriesId)}
                         className="flex-1 px-3 py-2 text-sm bg-red-600 text-white rounded-lg hover:bg-red-700 transition font-medium"
                       >
                         O‘chirish

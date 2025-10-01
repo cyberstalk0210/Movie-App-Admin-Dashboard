@@ -4,7 +4,7 @@ import { Film, Hash, Link, Image, Save, ChevronDown, CheckCircle, XCircle } from
 
 const Movies = () => {
   const [seriesList, setSeriesList] = useState([]);
-  const [episodes, setEpisodes] = useState([]); // Bu ro'yxat hozirda UI da ishlatilmayapti, lekin logika saqlanib qoldi
+  const [episodes, setEpisodes] = useState([]); 
   const [selectedSeriesId, setSelectedSeriesId] = useState("");
   const [newEpisode, setNewEpisode] = useState({
     title: "",
@@ -18,7 +18,6 @@ const Movies = () => {
   useEffect(() => {
     getSeries()
       .then(response => {
-        // Logikaga tegmagan holda, agar API massiv qaytarmasa, uni ajratib olish
         const data = Array.isArray(response) ? response : response.series || response.movies || [];
         setSeriesList(data);
       })
@@ -26,7 +25,7 @@ const Movies = () => {
   }, []);
 
   useEffect(() => {
-    setEpisodes([]); // Yangi serial tanlanganda epizod ro'yxatini tozalash
+    setEpisodes([]); 
     if (!selectedSeriesId) return;
     getEpisodesBySeries(selectedSeriesId)
       .then(setEpisodes)
@@ -67,13 +66,14 @@ const Movies = () => {
     const file = e.target.files[0];
     if (file) {
       setThumbFile(file);
-      setError(""); // Fayl tanlanganda xato xabarini tozalash
+      setError(""); 
     }
   };
 
   return (
-    // Responsive: ml-64 faqat katta ekranlar uchun
-    <div className="min-h-screen bg-[#0f111a] flex justify-center items-center p-4 sm:p-6 lg:p-8 lg:ml-64 text-white">
+    // ✨ TUZATISH: lg:ml-64 uslubi olib tashlandi, chunki bu komponentning o'zi mobil ko'rinishda oq bo'sh joy qoldirishi mumkin
+    // Asosiy kontent endi barcha ekranlarda to'g'ri joylashadi
+    <div className="min-h-screen bg-[#0f111a] flex justify-center items-center p-4 sm:p-6 lg:p-8 text-white">
       
       {/* Kartaning kengligi va stili */}
       <div className="max-w-lg w-full bg-[#1c1e2c] p-6 sm:p-8 rounded-xl shadow-2xl border border-gray-700/70">

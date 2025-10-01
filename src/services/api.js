@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { v4 as uuidv4 } from 'uuid';
 
-const API_URL = "http://37.60.235.197:8080";
+const API_URL = "http://localhost:8080";
 
 // Get or generate deviceId
 let deviceId = localStorage.getItem("deviceId");
@@ -202,7 +202,8 @@ export const signUp = async (email, password, username) => {
 // BANNER FUNCTIONS
 export const getBanners = async () => {
   try {
-    const response = await api.get('/banners/all');
+    const response = await api.get('/banners/all-banners');
+    console.log('API Banners Response Data:', response.data); 
     return response.data;
   } catch (error) {
     console.error('Get banners error:', error.response?.data || error.message);
@@ -235,17 +236,26 @@ export const createBanner = async (bannerData, seriesId) => {
   }
 };
 
-export const updateBanner = async (bannerId, imageFile, seriesId) => {
+export const updateBanner = async (bannerId, imageFile, oldImageUrl, seriesId) => {
   const formData = new FormData();
-  formData.append('image', imageFile);
+  
+  // 1. Agar yangi rasm fayli mavjud bo'lsa, uni qo'shing
+  if (imageFile) {
+    formData.append('image', imageFile);
+  } 
+  // 2. Aks holda, oldingi rasm URL manzilini 'imageUrl' nomi bilan jo'nating
+  else if (oldImageUrl) {
+    formData.append('imageUrl', oldImageUrl);
+  }
+  
+  // seriesId har doim majburiy
   formData.append('seriesId', seriesId);
 
   const response = await api.put(`/banners/${bannerId}/${seriesId}`, formData, {
-  headers: { 'Content-Type': 'multipart/form-data' },
-});
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
   return response.data;
 };
-
 
 export const deleteBanner = async (id, seriesId) => {
   try {
